@@ -4,6 +4,7 @@ import { getSentences, type Sentence, type Word } from '../db'
 import { POS } from '../labels'
 import { verbParts } from '../grammar'
 import ArticleBadge from './ArticleBadge.vue'
+import { dudenSearchUrl } from '../online'
 
 const props = defineProps<{ word: Word; query?: string }>()
 
@@ -50,6 +51,8 @@ function highlight(text: string) {
 
     <slot />
 
+    <a class="duden" :href="dudenSearchUrl(word.lemma)" target="_blank" rel="noopener">Открыть в Duden</a>
+
     <ul v-if="sentences.length" class="examples">
       <li v-for="s in sentences" :key="s.id">
         <span lang="de"><template v-for="(p, i) in highlight(s.de)" :key="i"><b v-if="p.hit">{{ p.t }}</b><template v-else>{{ p.t }}</template></template></span>
@@ -60,6 +63,11 @@ function highlight(text: string) {
 </template>
 
 <style scoped>
+.duden {
+  display: inline-block;
+  margin: 8px 0;
+  font-size: 14px;
+}
 .card {
   padding: 16px;
   margin-bottom: 16px;

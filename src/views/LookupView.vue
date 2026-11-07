@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue'
 import { searchWords, type Word } from '../db'
 import { POS } from '../labels'
-import { lookupOnline, type OnlineEntry } from '../online'
+import { dudenSearchUrl, lookupOnline, type OnlineEntry } from '../online'
 import WordCard from '../components/WordCard.vue'
 import DeckButton from '../components/DeckButton.vue'
 import StatsPanel from '../components/StatsPanel.vue'
@@ -75,6 +75,7 @@ watch(query, async q => {
   <p v-if="query.trim() && !exact.length && !more.length" class="muted">Ничего не найдено.</p>
 
   <section v-if="query.trim() && !exact.length" class="online">
+    <a :href="dudenSearchUrl(query)" target="_blank" rel="noopener" class="duden">Искать в Duden</a>
     <button v-if="!online" :disabled="onlineState === 'loading'" @click="searchOnline">
       {{ onlineState === 'loading' ? 'Поиск…' : 'Искать онлайн в Викисловаре' }}
     </button>
@@ -131,6 +132,7 @@ input {
   margin-top: 16px;
 }
 .online > button {
+  margin-left: 12px;
   min-height: 48px;
   padding: 0 16px;
   font: inherit;

@@ -30,3 +30,8 @@ export async function lookupOnline(word: string, signal?: AbortSignal): Promise<
     url: 'https://de.wiktionary.org/wiki/' + encodeURIComponent(String(page.title).replace(/ /g, '_')),
   }
 }
+
+// Duden has no public API, so we only link to its search page.
+export function dudenSearchUrl(word: string): string {
+  return 'https://www.duden.de/suchen/dudenonline/' + encodeURIComponent(word.trim())
+}
