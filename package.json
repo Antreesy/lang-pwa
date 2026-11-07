@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "data": "node scripts/build-data.mjs",
+    "test": "node --test 'scripts/*.test.mjs'"
   },
   "dependencies": {
     "vue": "^3.5.44",

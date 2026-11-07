@@ -1,0 +1,142 @@
+// Download Tatoeba and Kaikki data, write small JSON files to public/data/.
+// Usage: node scripts/build-data.mjs [maxWords]
+import { spawn } from 'node:child_process'
+import { createReadStream, createWriteStream, existsSync, mkdirSync, renameSync, writeFileSync } from 'node:fs'
+import { createInterface } from 'node:readline'
+import { Readable } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
+import { createGunzip } from 'node:zlib'
+import { compactEntry, sentenceScore, tokenize } from './lib.mjs'
+
+const MAX_WORDS = Number(process.argv[2] ?? 10000)
+const EXAMPLES_PER_WORD = 5
+const CACHE = new URL('../.cache/', import.meta.url).pathname
+const OUT = new URL('../public/data/', import.meta.url).pathname
+const TATOEBA = 'https://downloads.tatoeba.org/exports/per_language/'
+const FILES = {
+  'deu_sentences.tsv.bz2': TATOEBA + 'deu/deu_sentences.tsv.bz2',
+  'deu-rus_links.tsv.bz2': TATOEBA + 'deu/deu-rus_links.tsv.bz2',
+  'deu-eng_links.tsv.bz2': TATOEBA + 'deu/deu-eng_links.tsv.bz2',
+  'rus_sentences.tsv.bz2': TATOEBA + 'rus/rus_sentences.tsv.bz2',
+  'eng_sentences.tsv.bz2': TATOEBA + 'eng/eng_sentences.tsv.bz2',
+  'kaikki-de.jsonl.gz': 'https://kaikki.org/dewiktionary/Deutsch/kaikki.org-dictionary-Deutsch.jsonl.gz',
+}
+
+const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a)
+
+async function download(name, url) {
+  const file = CACHE + name
+  if (existsSync(file)) return
+  log('download', url)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`)
+  // Write to a temporary file first, so a stopped download does not look complete.
+  await pipeline(Readable.fromWeb(res.body), createWriteStream(file + '.part'))
+  renameSync(file + '.part', file)
+}
+
+/** Lines of a .bz2 (system bunzip2) or .gz file. */
+async function* lines(name) {
+  const file = CACHE + name
+  let input, done
+  if (name.endsWith('.bz2')) {
+    const p = spawn('bunzip2', ['-c', file], { stdio: ['ignore', 'pipe', 'inherit'] })
+    done = new Promise((ok, fail) => p.on('close', c => c ? fail(new Error(`bunzip2 ${name}: exit ${c}`)) : ok()))
+    input = p.stdout
+  } else {
+    input = createReadStream(file).pipe(createGunzip())
+  }
+  yield* createInterface({ input, crlfDelay: Infinity })
+  await done
+}
+
+/** Map German sentence id → first linked sentence id. */
+async function readLinks(name) {
+  const map = new Map()
+  for await (const l of lines(name)) {
+    const [de, other] = l.split('\t')
+    if (!map.has(de)) map.set(de, other)
+  }
+  return map
+}
+
+/** Texts of the sentences with the given ids. */
+async function readTexts(name, ids) {
+  const map = new Map()
+  for await (const l of lines(name)) {
+    const [id, , text] = l.split('\t')
+    if (ids.has(id)) map.set(id, text)
+  }
+  return map
+}
+
+mkdirSync(CACHE, { recursive: true })
+mkdirSync(OUT, { recursive: true })
+for (const [name, url] of Object.entries(FILES)) await download(name, url)
+
+// 1. Tatoeba: word counts from all German sentences, plus translated sentences as example candidates.
+log('read Tatoeba links')
+const ruLinks = await readLinks('deu-rus_links.tsv.bz2')
+const enLinks = await readLinks('deu-eng_links.tsv.bz2')
+const ruTexts = await readTexts('rus_sentences.tsv.bz2', new Set(ruLinks.values()))
+const enTexts = await readTexts('eng_sentences.tsv.bz2', new Set(enLinks.values()))
+
+log('read German sentences')
+const counts = new Map()
+const candidates = []
+for await (const l of lines('deu_sentences.tsv.bz2')) {
+  const [id, , de] = l.split('\t')
+  const tokens = tokenize(de)
+  // tokens[0] is the first word with its capital letter. Its lower-case variant is at the end.
+  for (const t of tokens.slice(1)) counts.set(t, (counts.get(t) ?? 0) + 1)
+  const ru = ruTexts.get(ruLinks.get(id))
+  const en = enTexts.get(enLinks.get(id))
+  if ((ru || en) && de.length >= 15 && de.length <= 100) candidates.push({ id: Number(id), de, ru, en, tokens })
+}
+log(`${counts.size} distinct tokens, ${candidates.length} example candidates`)
+
+// 2. Kaikki: keep lemmas with translations, rank them by how often their forms occur in Tatoeba.
+log('read Kaikki (this takes some minutes)')
+const entries = []
+for await (const l of lines('kaikki-de.jsonl.gz')) {
+  const e = compactEntry(JSON.parse(l))
+  if (!e) continue
+  const score = e.forms.reduce((sum, f) => sum + (counts.get(f) ?? 0), 0)
+  if (score > 0) entries.push({ ...e, score })
+}
+entries.sort((a, b) => b.score - a.score)
+const words = entries.slice(0, MAX_WORDS).map(({ score: _score, ...e }, i) => ({ id: i, ...e, examples: [] }))
+log(`${entries.length} ranked entries, keep ${words.length}`)
+
+// 3. Example sentences: the best few per word, by sentenceScore.
+const byForm = new Map()
+for (const w of words) for (const f of w.forms) byForm.set(f, [...(byForm.get(f) ?? []), w])
+const best = new Map(words.map(w => [w.id, []]))
+for (const s of candidates) {
+  const score = sentenceScore(s)
+  const seen = new Set()
+  for (const t of s.tokens) for (const w of byForm.get(t) ?? []) {
+    if (seen.has(w.id)) continue
+    seen.add(w.id)
+    const list = best.get(w.id)
+    if (list.length === EXAMPLES_PER_WORD && score >= list.at(-1).score) continue
+    list.push({ s, score })
+    list.sort((a, b) => a.score - b.score)
+    if (list.length > EXAMPLES_PER_WORD) list.pop()
+  }
+}
+const used = new Map()
+for (const w of words) for (const { s } of best.get(w.id)) {
+  w.examples.push(s.id)
+  used.set(s.id, { id: s.id, de: s.de, ...(s.ru ? { ru: s.ru } : { en: s.en }) })
+}
+// Search in the app ignores case.
+for (const w of words) w.forms = [...new Set(w.forms.map(f => f.toLowerCase()))]
+const sentences = [...used.values()]
+
+// 4. Output. The app imports the files again when meta.version changes.
+const meta = { version: new Date().toISOString(), words: words.length, sentences: sentences.length }
+writeFileSync(OUT + 'words.json', JSON.stringify(words))
+writeFileSync(OUT + 'sentences.json', JSON.stringify(sentences))
+writeFileSync(OUT + 'meta.json', JSON.stringify(meta, null, 2) + '\n')
+log('done', meta)
