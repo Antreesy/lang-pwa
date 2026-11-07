@@ -38,6 +38,10 @@ onMounted(async () => (s.value = await getStats()))
         <dd>{{ s.startedWords }} из {{ s.words }}</dd>
       </div>
       <div>
+        <dt>Слов отмечено «Знаю»</dt>
+        <dd>{{ s.knownWords }}</dd>
+      </div>
+      <div>
         <dt>Повторений за всё время</dt>
         <dd>{{ s.totalReviews }}</dd>
       </div>

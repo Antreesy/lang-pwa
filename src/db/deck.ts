@@ -22,11 +22,18 @@ export interface Review {
   log: FsrsLog // full ts-fsrs log, for parameter training later
 }
 
+/** A word that the user skipped on a new card. It does not come back in any deck. */
+export interface Skip {
+  wordId: string
+  reason: 'known' | 'ignored' // «Знаю» | «Не нужно»
+  at: Date
+}
+
 export async function isInDeck(wordId: string): Promise<boolean> {
   return (await db.cards.where('wordId').equals(wordId).count()) > 0
 }
 
-/** Add one card for each direction. Cards that exist keep their progress. */
+/** Add one card for each direction. Cards that exist keep their progress. A skip of the word is deleted. */
 export async function addToDeck(wordId: string): Promise<void> {
   const now = new Date()
   const existing = new Set(await db.cards.where('wordId').equals(wordId).primaryKeys())
@@ -35,7 +42,18 @@ export async function addToDeck(wordId: string): Promise<void> {
     const id = `${wordId}|${dir}`
     if (!existing.has(id)) cards.push({ id, wordId, dir, created: now, fsrs: await newFsrsCard(id, now) })
   }
-  await db.cards.bulkAdd(cards)
+  await db.transaction('rw', db.cards, db.skips, async () => {
+    await db.cards.bulkAdd(cards)
+    await db.skips.delete(wordId)
+  })
+}
+
+/** «Знаю» / «Не нужно»: the word leaves all decks. Its cards are deleted; the review history stays. */
+export async function skipWord(wordId: string, reason: Skip['reason']): Promise<void> {
+  await db.transaction('rw', db.cards, db.skips, async () => {
+    await db.cards.where('wordId').equals(wordId).delete()
+    await db.skips.put({ wordId, reason, at: new Date() })
+  })
 }
 
 /** A generated deck from decks.json. */
@@ -86,27 +104,33 @@ export async function newWordsToday(now = new Date()): Promise<number> {
   return (await today(now)).newWords
 }
 
-function statsOf(words: string[], cardsByWord: Map<string, DeckCard[]>, now: Date): DeckStats {
+/** Counts for a word list. A «Знаю» word counts as learned; a «Не нужно» word is not in the total. */
+function statsOf(words: string[], cardsByWord: Map<string, DeckCard[]>, skips: Map<string, Skip>, now: Date): DeckStats {
   let due = 0
   let learned = 0
+  let total = 0
   for (const w of words) {
+    const skip = skips.get(w)
+    if (skip?.reason === 'ignored') continue
+    total++
     const cards = cardsByWord.get(w) ?? []
     due += cards.filter(c => c.fsrs.reps > 0 && c.fsrs.dueAt <= now).length
-    if (cards.some(c => c.fsrs.reps > 0)) learned++
+    if (skip || cards.some(c => c.fsrs.reps > 0)) learned++
   }
-  return { due, fresh: words.length - learned, learned, total: words.length }
+  return { due, fresh: total - learned, learned, total }
 }
 
 /** Decks with counts, for the deck list. */
 export async function deckList(now = new Date()) {
   // shortcut: reads all cards, fast up to some 10,000 cards; use index queries if the deck gets larger.
-  const cards = await db.cards.toArray()
+  const [cards, skipRows] = await Promise.all([db.cards.toArray(), db.skips.toArray()])
+  const skips = new Map(skipRows.map(s => [s.wordId, s]))
   const byWord = new Map<string, DeckCard[]>()
   for (const c of cards) byWord.set(c.wordId, [...(byWord.get(c.wordId) ?? []), c])
   const decks = (await db.decks.toArray()).sort((a, b) => a.order - b.order)
   return {
-    all: statsOf([...byWord.keys()], byWord, now),
-    decks: decks.map(d => ({ ...d, ...statsOf(d.words, byWord, now) })),
+    all: statsOf([...byWord.keys()], byWord, skips, now),
+    decks: decks.map(d => ({ ...d, ...statsOf(d.words, byWord, skips, now) })),
     newToday: await newWordsToday(now),
   }
 }
@@ -126,6 +150,7 @@ export async function getStats(now = new Date()) {
     words: new Set(cards.map(c => c.wordId)).size,
     startedWords: started.size,
     totalReviews: await db.reviews.count(),
+    knownWords: await db.skips.filter(s => s.reason === 'known').count(),
   }
 }
 
@@ -172,7 +197,8 @@ export async function nextCard(deckId: string, s: Session, now = new Date()): Pr
   const otherDir = newCards.filter(c => !reviewed.has(c.wordId) && started.has(c.wordId))
   const fresh = newCards.filter(c => !reviewed.has(c.wordId) && !started.has(c.wordId))
   const withCards = new Set(cards.map(c => c.wordId))
-  const unstarted = deck ? deck.words.filter(w => !withCards.has(w)) : []
+  const skipped = new Set(deck ? await db.skips.where('wordId').anyOf(deck.words).primaryKeys() : [])
+  const unstarted = deck ? deck.words.filter(w => !withCards.has(w) && !skipped.has(w)) : []
   const freshWords = new Set(fresh.map(c => c.wordId)).size + unstarted.length
 
   let card: DeckCard | undefined = due[0] ?? otherDir[0]

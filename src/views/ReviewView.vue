@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { ALL, answerCard, getDeck, getWord, NEW_WORDS_PER_DAY, nextCard, type DeckCard, type Gender, type Session, type Word } from '../db'
+import { ALL, answerCard, getDeck, getWord, NEW_WORDS_PER_DAY, nextCard, skipWord, type DeckCard, type Gender, type Session, type Skip, type Word } from '../db'
 import { formatInterval, GRADES, preview, type Grade } from '../srs'
 import { POS } from '../labels'
 import WordCard from '../components/WordCard.vue'
@@ -67,6 +67,14 @@ function flip(article: Gender | null) {
   ;(document.activeElement as HTMLElement | null)?.blur()
 }
 
+/** «Знаю» / «Не нужно» on a new card: the word leaves all decks, the next word comes. */
+async function skip(reason: Skip['reason']) {
+  if (!card.value || busy.value) return
+  busy.value = true
+  await skipWord(card.value.wordId, reason)
+  await next()
+}
+
 async function rate(g: Grade) {
   if (!card.value || !flipped.value || busy.value) return
   busy.value = true
@@ -118,6 +126,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </div>
       </template>
       <button class="show" @click="flip(null)">Показать ответ <kbd>Пробел</kbd></button>
+      <div v-if="card.fsrs.reps === 0" class="skip">
+        <span class="hint">Новое слово</span>
+        <button :disabled="busy" @click="skip('known')">Знаю</button>
+        <button :disabled="busy" @click="skip('ignored')">Не нужно</button>
+      </div>
     </section>
 
     <section v-else>
@@ -209,6 +222,22 @@ button {
 }
 .articles .das {
   color: var(--das);
+}
+.skip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+.skip .hint {
+  margin-right: 4px;
+}
+.skip button {
+  min-height: 48px;
+  padding: 0 16px;
+  font-size: 15px;
+  color: var(--muted);
 }
 .show {
   width: 100%;
