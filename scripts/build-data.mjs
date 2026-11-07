@@ -105,6 +105,8 @@ const seenIds = new Map()
 const groups = new Map() // word id → deck group keys
 for await (const l of lines('kaikki-de.jsonl.gz')) {
   const raw = JSON.parse(l)
+  // First names are not words of the app, but a form equal to a name belongs to the name: "Maria" is not the plural of das Mare.
+  if (raw.lang_code === 'de' && raw.pos === 'name' && raw.pos_title === 'Vorname') lemmas.add(raw.word)
   const e = compactEntry(raw)
   if (!e) continue
   lemmas.add(e.lemma)
