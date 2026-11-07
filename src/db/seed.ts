@@ -1,5 +1,5 @@
 // Import public/data/*.json into IndexedDB at first start and after each data update.
-import { db, type Sentence, type Word } from '.'
+import { db, fold, type Sentence, type Word } from '.'
 
 const CHUNK = 2000
 
@@ -27,6 +27,7 @@ export async function importData(onProgress: (done: number) => void): Promise<vo
 
   onProgress(0)
   const [words, sentences] = await Promise.all([getJson<Word[]>('words.json'), getJson<Sentence[]>('sentences.json')])
+  for (const w of words) w.keys = [...new Set(w.forms.map(fold))]
   const total = words.length + sentences.length
   let done = 0
   async function putAll<T>(table: { bulkPut(rows: T[]): Promise<unknown> }, rows: T[]) {
