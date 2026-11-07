@@ -1,7 +1,7 @@
 // Run with: npm test (Node strips the types).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { checkAnswer, nounParts, showPresent, verbParts } from './grammar.ts'
+import { checkAnswer, checkParts, nounParts, showPresent, verbParts } from './grammar.ts'
 
 const word = (w: object) => ({ id: 'x', rank: 0, ru: [], en: [], forms: [], examples: [], ...w }) as Parameters<typeof verbParts>[0]
 
@@ -39,4 +39,12 @@ test('checkAnswer: German parts checked, Russian returned', () => {
   const verb = checkAnswer('gehen ging ist gegangen', ['gehen', 'ging', 'ist gegangen'])
   assert.deepEqual(verb.parts.map(p => p.ok), [true, true, true])
   assert.deepEqual(checkAnswer('gehen ging gegangen', ['ging', 'ist gegangen']).parts.map(p => p.ok), [true, false])
+})
+
+test('checkParts: plural article optional, singular article required', () => {
+  const haus = { id: 'x', rank: 0, ru: [], en: [], forms: [], examples: [], lemma: 'Haus', pos: 'noun', genders: ['n'], plural: 'Häuser' } as Parameters<typeof nounParts>[0]
+  const parts = checkParts(haus, nounParts(haus))
+  assert.deepEqual(parts, ['das Haus', '(die) Häuser'])
+  assert.deepEqual(checkAnswer('das Haus Hauser', parts).parts.map(p => p.ok), [true, true])
+  assert.deepEqual(checkAnswer('Haus Häuser', parts).parts.map(p => p.ok), [false, true])
 })

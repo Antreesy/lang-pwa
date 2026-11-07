@@ -42,16 +42,23 @@ export interface PartResult {
   ok: boolean
 }
 
+/** Parts for the answer check. The plural article is always "die", so it is optional: "(die) Häuser". */
+export function checkParts(w: Word, parts: string[]): string[] {
+  return parts.map(p => (w.plural && p === `die ${w.plural}` ? `(die) ${w.plural}` : p))
+}
+
 /**
- * Check the German words in a typed answer. Each expected part is correct if all its words are in the answer.
- * Order, commas, case and missing umlauts do not matter. Cyrillic words are the Russian meaning: they are returned for comparison.
+ * Check the German words in a typed answer. Each expected part is correct if all its words are in the answer;
+ * a word in parentheses is optional. Order, commas, case and missing umlauts do not matter.
+ * Cyrillic words are the Russian meaning: they are returned for comparison.
  */
 export function checkAnswer(typed: string, expected: string[]): { parts: PartResult[]; russian: string } {
   const words = typed.split(/[\s,;·—–\-/]+/).filter(Boolean)
   const russian = words.filter(t => /\p{Script=Cyrillic}/u.test(t)).join(' ')
   const german = new Set(words.filter(t => !/\p{Script=Cyrillic}/u.test(t)).map(fold))
+  const required = (part: string) => part.split(/\s+/).filter(t => !t.startsWith('('))
   return {
-    parts: expected.map(part => ({ part, ok: part.split(/\s+/).every(t => german.has(fold(t))) })),
+    parts: expected.map(part => ({ part, ok: required(part).every(t => german.has(fold(t))) })),
     russian,
   }
 }

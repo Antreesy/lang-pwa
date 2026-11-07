@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { ALL, answerCard, getDeck, getWord, NEW_WORDS_PER_DAY, nextCard, skipWord, type DeckCard, type Gender, type Session, type Skip, type Word } from '../db'
 import { formatInterval, GRADES, preview, type Grade } from '../srs'
 import { POS } from '../labels'
-import { nounParts, showPresent } from '../grammar'
+import { checkAnswer, checkParts, nounParts, showPresent, verbParts } from '../grammar'
 import WordCard from '../components/WordCard.vue'
 
 const props = defineProps<{ deck: string }>()
@@ -25,6 +25,20 @@ const title = ref('')
 
 // Article buttons only on DE→RU noun cards with one gender. On RU→DE cards, the article is recalled with the word.
 const isNoun = computed(() => card.value?.dir === 'de-ru' && word.value?.pos === 'noun' && word.value.genders?.length === 1 && !word.value.pluralOnly)
+
+// Optional typed answer. German parts are checked; Russian words are shown next to the meaning.
+const typed = ref('')
+const expected = computed(() => {
+  const w = word.value
+  if (!w || !card.value) return []
+  if (card.value.dir === 'ru-de') {
+    const nouns = nounParts(w)
+    return checkParts(w, nouns.length ? nouns : [w.lemma, ...verbParts(w)])
+  }
+  // DE→RU: the word is on the front, the article comes from the buttons. Check only the other forms.
+  return checkParts(w, [...(w.adjForms?.length ? w.adjForms : nounParts(w).slice(1)), ...verbParts(w)])
+})
+const result = computed(() => (flipped.value && typed.value.trim() ? checkAnswer(typed.value, expected.value) : null))
 
 /** What to recall, shown on the front: meaning and grammar. */
 const recall = computed(() => {
@@ -53,6 +67,7 @@ async function next() {
   const res = await nextCard(props.deck, session, now)
   flipped.value = false
   picked.value = null
+  typed.value = ''
   card.value = res.card
   word.value = null
   if (res.card) {
@@ -132,6 +147,17 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <p v-if="card.dir === 'de-ru'" class="prompt" lang="de">{{ word.lemma }}</p>
       <p v-else class="prompt" :lang="word.ru.length ? 'ru' : 'en'">{{ frontMeaning }}</p>
       <p class="recall">Вспомните: {{ recall }}</p>
+      <input
+        v-model="typed"
+        class="answer"
+        placeholder="Ответ (необязательно)"
+        aria-label="Ответ (необязательно)"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        enterkeyhint="done"
+        @keydown.enter.prevent="flip(null)"
+      />
 
       <template v-if="isNoun">
         <p class="hint">Выберите артикль:</p>
@@ -153,6 +179,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <p v-if="picked" :class="['verdict', articleOk ? 'ok' : 'bad']" role="status">
         {{ articleOk ? '✓ Артикль верный' : `✗ Артикль неверный: вы выбрали «${ARTICLES.find(a => a.g === picked)!.label}»` }}
       </p>
+      <div v-if="result" class="typed" role="status">
+        <ul v-if="result.parts.length">
+          <li v-for="p in result.parts" :key="p.part" :class="p.ok ? 'ok' : 'bad'" lang="de">{{ p.ok ? '✓' : '✗' }} {{ p.part }}</li>
+        </ul>
+        <p v-if="result.russian" class="muted">Ваш перевод: <span lang="ru">{{ result.russian }}</span></p>
+      </div>
       <WordCard :word="word" />
       <div class="grades">
         <button v-for="g in GRADES" :key="g" :class="`g${g}`" :disabled="busy" @click="rate(g)">
@@ -238,6 +270,31 @@ button {
 }
 .articles .das {
   color: var(--das);
+}
+.answer {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 16px;
+  margin-bottom: 16px;
+  font: inherit;
+  font-size: 18px;
+  text-align: center;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.typed ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  font-weight: 600;
+}
+.typed .muted {
+  margin: 0 0 12px;
 }
 .recall {
   margin: -16px 0 24px;
