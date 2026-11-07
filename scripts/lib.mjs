@@ -67,6 +67,14 @@ export function compactEntry(e) {
     out.genders = [...new Set((e.tags ?? []).map(t => GENDER[t]).filter(Boolean))]
     const nomPl = (e.forms ?? []).find(f => f.tags?.includes('nominative') && f.tags.includes('plural') && f.form !== '—')
     out.plural = nomPl?.form ?? null
+    const cats = new Set((e.categories ?? []).map(c => c.name ?? c))
+    if (cats.has('Pluraletantum (Deutsch)')) out.pluralOnly = true
+    // Adjectival nouns change with the article: die Erwachsene, eine Erwachsene, die Erwachsenen.
+    if (cats.has('Adjektivische Deklination (Deutsch)')) {
+      const nom = (number, re) => (e.forms ?? []).find(f => f.tags?.includes('nominative') && f.tags.includes(number) && re.test(f.form))?.form
+      const forms = [nom('singular', /^(der|die|das) /), nom('singular', /^(ein|eine) /), nom('plural', /^die /)].filter(Boolean)
+      if (forms.length >= 2) out.adjForms = forms
+    }
   }
   if (e.pos === 'verb') {
     const f = e.forms ?? []

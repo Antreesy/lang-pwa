@@ -31,6 +31,24 @@ test('noun: gender, plural, forms, unique translations', () => {
   assert.deepEqual(e, { lemma: 'Haus', pos: 'noun', ru: ['дом'], en: ['house'], forms: ['Haus', 'Häuser', 'Hauses'], genders: ['n'], plural: 'Häuser' })
 })
 
+test('noun: plural-only flag and adjectival forms', () => {
+  const base = { pos: 'noun', lang_code: 'de', senses: [{}], translations: [{ lang_code: 'ru', word: 'x' }] }
+  const eltern = compactEntry({ ...base, word: 'Eltern', categories: [{ name: 'Pluraletantum (Deutsch)' }] })
+  assert.equal(eltern.pluralOnly, true)
+  const erw = compactEntry({
+    ...base, word: 'Erwachsene', tags: ['feminine'], categories: [{ name: 'Adjektivische Deklination (Deutsch)' }],
+    forms: [
+      { form: 'Erwachsene', tags: ['nominative', 'plural'] },
+      { form: 'die Erwachsene', tags: ['nominative', 'singular'] },
+      { form: 'die Erwachsenen', tags: ['nominative', 'plural'] },
+      { form: 'eine Erwachsene', tags: ['nominative', 'singular'] },
+      { form: 'keine Erwachsenen', tags: ['nominative', 'plural'] },
+    ],
+  })
+  assert.deepEqual(erw.adjForms, ['die Erwachsene', 'eine Erwachsene', 'die Erwachsenen'])
+  assert.equal(compactEntry({ ...base, word: 'Haus' }).adjForms, undefined)
+})
+
 test('verb: main forms, only haben/sein as auxiliary, no multi-word forms', () => {
   const e = compactEntry({
     word: 'gehen', pos: 'verb', lang_code: 'de', senses: [{ glosses: ['x'] }],
