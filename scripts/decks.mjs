@@ -3,14 +3,14 @@
 const DECK_SIZE = 50 // target words per deck; a group splits into parts of equal size
 const MIN_WORDS = 8 // smaller groups give no deck
 const MAX_GRAMMAR_WORDS = 300 // most frequent words of each grammar group
+const MAX_WORDS = { 'grammar:noun-article': 600 } // groups with a different limit
 
 export const GRAMMAR = {
   'verb-strong': 'Сильные и неправильные глаголы',
   'verb-separable': 'Глаголы с отделяемой приставкой',
   'verb-sein': 'Глаголы с sein в Perfekt',
-  'noun-m': 'Существительные: der',
-  'noun-f': 'Существительные: die',
-  'noun-n': 'Существительные: das',
+  // One mixed group, not one group per article: the article quiz is no test if all words in a deck have "der".
+  'noun-article': 'Артикли: der, die, das',
   'noun-plural-only': 'Только множественное число',
   'noun-adjectival': 'Существительные как прилагательные (der Erwachsene)',
 }
@@ -60,7 +60,7 @@ export function groupsOf(compact, raw) {
     if (compact.verb?.auxiliary.includes('sein')) out.push('grammar:verb-sein')
   }
   if (compact.pos === 'noun') {
-    if (compact.genders?.length === 1) out.push(`grammar:noun-${compact.genders[0]}`)
+    if (compact.genders?.length === 1) out.push('grammar:noun-article')
     if (cats.has('Pluraletantum (Deutsch)')) out.push('grammar:noun-plural-only')
     if (cats.has('Adjektivische Deklination (Deutsch)')) out.push('grammar:noun-adjectival')
   }
@@ -85,7 +85,7 @@ export function buildDecks(words, groups) {
   for (const key of keys) {
     const [kind, name] = key.split(':')
     let ids = members.get(key) ?? []
-    if (kind === 'grammar') ids = ids.slice(0, MAX_GRAMMAR_WORDS)
+    if (kind === 'grammar') ids = ids.slice(0, MAX_WORDS[key] ?? MAX_GRAMMAR_WORDS)
     if (ids.length < MIN_WORDS) continue
     const parts = Math.ceil(ids.length / DECK_SIZE)
     const size = Math.ceil(ids.length / parts)

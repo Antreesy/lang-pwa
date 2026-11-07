@@ -24,7 +24,9 @@ test('groupsOf: grammar and topic keys', () => {
   const verb = { lemma: 'aufstehen', pos: 'verb', verb: { present3: 'steht auf', past: 'stand auf', auxiliary: ['sein'] } }
   assert.deepEqual(groupsOf(verb, {}), ['grammar:verb-strong', 'grammar:verb-separable', 'grammar:verb-sein'])
   const noun = { lemma: 'Apfel', pos: 'noun', genders: ['m'] }
-  assert.deepEqual(groupsOf(noun, { hypernyms: [{ word: 'Obst', sense_index: '1' }, { word: 'Frucht', sense_index: '1' }] }), ['grammar:noun-m', 'topic:food'])
+  assert.deepEqual(groupsOf(noun, { hypernyms: [{ word: 'Obst', sense_index: '1' }, { word: 'Frucht', sense_index: '1' }] }), ['grammar:noun-article', 'topic:food'])
+  // Two genders (der/das Joghurt): no article deck, the quiz has no single answer.
+  assert.deepEqual(groupsOf({ lemma: 'Joghurt', pos: 'noun', genders: ['m', 'n'] }, {}), [])
   const eltern = { lemma: 'Eltern', pos: 'noun', genders: [] }
   assert.deepEqual(groupsOf(eltern, { categories: [{ name: 'Pluraletantum (Deutsch)' }] }), ['grammar:noun-plural-only'])
 })
