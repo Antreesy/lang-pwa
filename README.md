@@ -4,7 +4,7 @@ A personal app to learn German (B1). It is a PWA: you install it on Android and 
 The menus are in Russian. The content is in German.
 
 - **Поиск:** with an empty search field, it shows the stats: cards due today, reviewed today, total cards. Type a German word to find it, also an inflected form ("ging" → gehen, "Hauser" → Häuser). See the article, plural, verb forms, Russian/English meaning and 5 example sentences.
-- **Учить:** flashcards with FSRS (Снова / Трудно / Хорошо / Легко), DE → RU and RU → DE. Cards ask the meaning and the grammar: nouns with article and plural, verbs with Präteritum and Perfekt. On DE → RU noun cards, select der/die/das first. Optional typed answer: the app checks the German forms. Generated decks: grammar groups and topics. Maximum 20 new words a day; skip a new word with «Знаю» or «Не нужно».
+- **Учить:** flashcards with FSRS (Снова / Трудно / Хорошо / Легко), DE → RU and RU → DE. Cards ask the meaning and the grammar: nouns with article and plural, verbs with Präteritum and Perfekt. On DE → RU noun cards, select der/die/das first. Optional typed answer: the app checks the German forms. Generated decks: grammar groups and topics. No daily limit for new words; skip a new word with «Знаю» or «Не нужно».
 - **Читать:** random Tatoeba sentences, with endless scroll. Tap a word to open its card in a bottom sheet (also «+ В колоду»). Tap «перевод» to show the translation.
 - **Настройки** (cog icon): theme (system / light / dark), export and import of the deck as a JSON file, sources and licenses.
 
@@ -138,7 +138,7 @@ src/
   db/                all database access (Dexie). Change to PouchDB here for sync.
     index.ts         schema, word search
     seed.ts          import of public/data on first start and data update
-    deck.ts          cards, reviews, decks, daily limit, stats
+    deck.ts          cards, reviews, decks, review queue, stats
     backup.ts        JSON export and import
   srs.ts             ts-fsrs wrapper
   grammar.ts         grammar parts of a card, typed answer check (tests: grammar.test.ts)

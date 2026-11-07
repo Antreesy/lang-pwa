@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { ALL, answerCard, getDeck, getWord, NEW_WORDS_PER_DAY, nextCard, skipWord, type DeckCard, type Gender, type Session, type Skip, type Word } from '../db'
+import { ALL, answerCard, getDeck, getWord, nextCard, skipWord, type DeckCard, type Gender, type Session, type Skip, type Word } from '../db'
 import { formatInterval, GRADES, preview, type Grade } from '../srs'
 import { POS } from '../labels'
 import { checkAnswer, checkParts, nounParts, showPresent, verbParts } from '../grammar'
@@ -18,7 +18,6 @@ const picked = ref<Gender | null>(null)
 const intervals = ref(new Map<Grade, string>())
 const left = ref(0)
 const nextDue = ref<Date | null>(null)
-const limitReached = ref(false)
 const newTomorrow = ref(false)
 const busy = ref(true)
 const title = ref('')
@@ -83,7 +82,6 @@ async function next() {
     intervals.value = new Map(GRADES.map(g => [g, formatInterval(now, p.get(g)!)]))
   } else {
     nextDue.value = res.nextDue
-    limitReached.value = res.limitReached
     newTomorrow.value = res.newTomorrow
   }
   busy.value = false
@@ -199,7 +197,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   <div v-else-if="!busy" class="empty">
     <template v-if="nextDue || newTomorrow">
       <p>На сегодня всё! 🎉</p>
-      <p v-if="limitReached" class="muted">Лимит новых слов ({{ NEW_WORDS_PER_DAY }} в день) исчерпан.</p>
       <p v-if="newTomorrow" class="muted">Новые карточки — завтра.</p>
       <p v-if="nextDue" class="muted">Следующее повторение: {{ nextDue.toLocaleString('ru-RU', { dateStyle: 'medium', timeStyle: 'short' }) }}</p>
     </template>

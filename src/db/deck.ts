@@ -68,7 +68,6 @@ export interface Deck {
 
 /** Deck id for "all cards" (all words with cards, also words added with the "В колоду" button). */
 export const ALL = 'all'
-export const NEW_WORDS_PER_DAY = 20
 // If nothing is due now, show cards due in the next 20 minutes (learning steps), as Anki does.
 const LEARN_AHEAD_MS = 20 * 60 * 1000
 
@@ -166,13 +165,13 @@ export interface Session {
 
 export type NextCard =
   | { card: DeckCard; left: number }
-  | { card: null; nextDue: Date | null; limitReached: boolean; newTomorrow: boolean }
+  | { card: null; nextDue: Date | null; newTomorrow: boolean }
 
 /**
  * Next card of a deck (or ALL), in this order:
  * 1. due reviews;
  * 2. new cards of words started before today (the other direction), no limit;
- * 3. new words, up to NEW_WORDS_PER_DAY a day; a generated deck makes cards for its next word;
+ * 3. new words, no daily limit; a generated deck makes cards for its next word;
  * 4. learning cards due within LEARN_AHEAD_MS.
  * A new card of a word reviewed today waits until tomorrow, as "bury siblings" in Anki.
  */
@@ -181,8 +180,7 @@ export async function nextCard(deckId: string, s: Session, now = new Date()): Pr
   const cards = deck ? await db.cards.where('wordId').anyOf(deck.words).toArray() : await db.cards.toArray()
   const allowed = (c: DeckCard) => !s.doneWords.has(c.wordId) || s.doneCards.has(c.id)
   const byDue = (a: DeckCard, b: DeckCard) => a.fsrs.dueAt.getTime() - b.fsrs.dueAt.getTime()
-  const { reviewed, newWords } = await today(now)
-  const quota = Math.max(0, NEW_WORDS_PER_DAY - newWords)
+  const { reviewed } = await today(now)
 
   const reviews = cards.filter(c => c.fsrs.reps > 0)
   const due = reviews.filter(c => c.fsrs.dueAt <= now && allowed(c)).sort(byDue)
@@ -202,7 +200,7 @@ export async function nextCard(deckId: string, s: Session, now = new Date()): Pr
   const freshWords = new Set(fresh.map(c => c.wordId)).size + unstarted.length
 
   let card: DeckCard | undefined = due[0] ?? otherDir[0]
-  if (!card && quota > 0) {
+  if (!card) {
     card = fresh[0]
     if (!card && unstarted.length) {
       await addToDeck(unstarted[0])
@@ -210,10 +208,9 @@ export async function nextCard(deckId: string, s: Session, now = new Date()): Pr
     }
   }
   card ??= reviews.filter(c => c.fsrs.dueAt.getTime() <= now.getTime() + LEARN_AHEAD_MS && allowed(c)).sort(byDue)[0]
-  if (card) return { card, left: due.length + otherDir.length + Math.min(quota, freshWords) }
+  if (card) return { card, left: due.length + otherDir.length + freshWords }
 
-  const limitReached = quota === 0 && freshWords > 0
-  return { card: null, nextDue: reviews.sort(byDue)[0]?.fsrs.dueAt ?? null, limitReached, newTomorrow: limitReached || buried.length > 0 }
+  return { card: null, nextDue: reviews.sort(byDue)[0]?.fsrs.dueAt ?? null, newTomorrow: buried.length > 0 }
 }
 
 /** Save a rating: new card state and one review log entry. */

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ALL, deckList, NEW_WORDS_PER_DAY, type Deck, type DeckStats } from '../db'
+import { ALL, deckList, type Deck, type DeckStats } from '../db'
 
 const data = ref<Awaited<ReturnType<typeof deckList>> | null>(null)
 onMounted(async () => (data.value = await deckList()))
@@ -32,7 +32,7 @@ const percent = (s: { learned: number; total: number }) => (s.total ? Math.round
 <template>
   <h1>Учить</h1>
   <template v-if="data">
-    <p class="muted">Новых слов сегодня: {{ data.newToday }} из {{ NEW_WORDS_PER_DAY }}</p>
+    <p class="muted">Новых слов сегодня: {{ data.newToday }}</p>
 
     <RouterLink :to="link(ALL)" class="deck all">
       <span class="name">Все мои карточки</span>

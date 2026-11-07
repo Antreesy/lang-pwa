@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { getStats, NEW_WORDS_PER_DAY } from '../db'
+import { getStats } from '../db'
 
 const s = ref<Awaited<ReturnType<typeof getStats>> | null>(null)
 onMounted(async () => (s.value = await getStats()))
@@ -27,7 +27,7 @@ onMounted(async () => (s.value = await getStats()))
     <dl>
       <div>
         <dt>Новых слов сегодня</dt>
-        <dd>{{ s.newWordsToday }} из {{ NEW_WORDS_PER_DAY }}</dd>
+        <dd>{{ s.newWordsToday }}</dd>
       </div>
       <div>
         <dt>Правильных ответов сегодня</dt>
