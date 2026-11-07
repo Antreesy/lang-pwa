@@ -1,6 +1,7 @@
 // Download Tatoeba and Kaikki data, write small JSON files to public/data/.
 // Usage: node scripts/build-data.mjs [maxWords]
 import { spawn } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { createReadStream, createWriteStream, existsSync, mkdirSync, renameSync, writeFileSync } from 'node:fs'
 import { createInterface } from 'node:readline'
 import { Readable } from 'node:stream'
@@ -151,9 +152,11 @@ const sentences = [...used.values()]
 const decks = buildDecks(words, groups)
 
 // 4. Output. The app imports the files again when meta.version changes.
-const meta = { version: new Date().toISOString(), words: words.length, sentences: sentences.length, decks: decks.length }
-writeFileSync(OUT + 'words.json', JSON.stringify(words))
-writeFileSync(OUT + 'sentences.json', JSON.stringify(sentences))
-writeFileSync(OUT + 'decks.json', JSON.stringify(decks))
+// The version is a hash of the data, so a new build with the same data causes no import on the devices.
+const files = { 'words.json': JSON.stringify(words), 'sentences.json': JSON.stringify(sentences), 'decks.json': JSON.stringify(decks) }
+const hash = createHash('sha256')
+for (const text of Object.values(files)) hash.update(text)
+const meta = { version: hash.digest('hex').slice(0, 16), built: new Date().toISOString(), words: words.length, sentences: sentences.length, decks: decks.length }
+for (const [name, text] of Object.entries(files)) writeFileSync(OUT + name, text)
 writeFileSync(OUT + 'meta.json', JSON.stringify(meta, null, 2) + '\n')
 log('done', meta)

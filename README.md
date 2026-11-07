@@ -61,6 +61,17 @@ To look at the build on your computer:
 npm run preview
 ```
 
+### GitHub Pages
+
+The app is on https://antreesy.github.io/lang-pwa/.
+Each push to `main` runs [.github/workflows/pages.yml](.github/workflows/pages.yml): tests, dictionary data, build, deploy (about 3–5 minutes; about 1 minute when the data comes from the cache).
+
+- The dictionary data is built again only when a data script changes.
+- The downloaded source files are cached with the key `downloads-v1`. To get new Tatoeba and Wiktionary data, change it to `downloads-v2`.
+- `meta.json` → `version` is a hash of the data. If the data is the same, the devices do not import the dictionary again.
+
+### Other servers
+
 If the app is not at the root of the domain (for example `https://example.com/deutsch/`), build with the path:
 
 ```bash
@@ -79,10 +90,9 @@ A PWA installs only from **HTTPS** or from **localhost**. A LAN address such as 
 
 ### Android (Chrome)
 
-1. Put `dist/` on a server with HTTPS (for example GitHub Pages, Netlify or your home server with a certificate).
-2. Open the URL in Chrome on the phone.
-3. Wait until the dictionary import is complete (about 20–30 s).
-4. Open the Chrome menu **⋮ → Install app** (or **Add to Home screen**).
+1. Open https://antreesy.github.io/lang-pwa/ in Chrome on the phone (or your own HTTPS server).
+2. Wait until the dictionary import is complete (about 20–30 s).
+3. Open the Chrome menu **⋮ → Install app** (or **Add to Home screen**).
 
 To test on a phone without HTTPS, use USB port forwarding:
 
