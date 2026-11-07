@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { ALL, answerCard, getDeck, getWord, nextCard, skipWord, type DeckCard, type Gender, type Session, type Skip, type Word } from '../db'
 import { formatInterval, GRADES, preview, type Grade } from '../srs'
 import { POS } from '../labels'
-import { checkAnswer, checkParts, nounParts, showPresent, verbParts } from '../grammar'
+import { checkAnswer, checkParts, nounParts, showPresent, verbSlots } from '../grammar'
 import WordCard from '../components/WordCard.vue'
 
 const props = defineProps<{ deck: string }>()
@@ -26,18 +26,29 @@ const title = ref('')
 const isNoun = computed(() => card.value?.dir === 'de-ru' && word.value?.pos === 'noun' && word.value.genders?.length === 1 && !word.value.pluralOnly)
 
 // Optional typed answer. German parts are checked; Russian words are shown next to the meaning.
-const typed = ref('')
-const expected = computed(() => {
+// A card with several expected forms gets one input per form, with the form name as placeholder.
+const slots = computed<{ part: string; label: string }[]>(() => {
   const w = word.value
   if (!w || !card.value) return []
-  if (card.value.dir === 'ru-de') {
-    const nouns = nounParts(w)
-    return checkParts(w, nouns.length ? nouns : [w.lemma, ...verbParts(w)])
-  }
+  const nouns = nounParts(w).map((part, i) => ({
+    part,
+    label: w.adjForms?.length ? `Форма ${i + 1}` : w.pluralOnly || i > 0 ? 'Plural' : 'Artikel + Singular',
+  }))
+  if (card.value.dir === 'ru-de') return nouns.length ? nouns : [{ part: w.lemma, label: 'Infinitiv' }, ...verbSlots(w)]
   // DE→RU: the word is on the front, the article comes from the buttons. Check only the other forms.
-  return checkParts(w, [...(w.adjForms?.length ? w.adjForms : nounParts(w).slice(1)), ...verbParts(w)])
+  return [...(w.adjForms?.length ? nouns : nouns.slice(1)), ...verbSlots(w)]
 })
-const result = computed(() => (flipped.value && typed.value.trim() ? checkAnswer(typed.value, expected.value) : null))
+const expected = computed(() => (word.value ? checkParts(word.value, slots.value.map(s => s.part)) : []))
+// One input per slot, plus a translation input on DE→RU cards. A single input if there is nothing to split.
+const multi = computed(() => slots.value.length > 1)
+const inputs = computed(() => {
+  if (!multi.value) return [{ label: 'Ответ (необязательно)' }]
+  const list = slots.value.map(s => ({ label: s.label }))
+  return card.value?.dir === 'de-ru' ? [{ label: 'Перевод' }, ...list] : list
+})
+const answers = ref<string[]>([])
+const typed = computed(() => answers.value.join(' , '))
+const result = computed(() => (flipped.value && typed.value.replace(/[\s,]/g, '') ? checkAnswer(typed.value, expected.value) : null))
 
 /** What to recall, shown on the front: meaning and grammar. */
 const recall = computed(() => {
@@ -66,7 +77,7 @@ async function next() {
   const res = await nextCard(props.deck, session, now)
   flipped.value = false
   picked.value = null
-  typed.value = ''
+  answers.value = []
   card.value = res.card
   word.value = null
   if (res.card) {
@@ -146,14 +157,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <p v-else class="prompt" :lang="word.ru.length ? 'ru' : 'en'">{{ frontMeaning }}</p>
       <p class="recall">Вспомните: {{ recall }}</p>
       <input
-        v-model="typed"
+        v-for="(inp, i) in inputs"
+        :key="`${card.id}-${i}`"
+        v-model="answers[i]"
         class="answer"
-        placeholder="Ответ (необязательно)"
-        aria-label="Ответ (необязательно)"
+        :placeholder="inp.label"
+        :aria-label="inp.label"
         autocomplete="off"
         autocapitalize="off"
         spellcheck="false"
-        enterkeyhint="done"
+        :enterkeyhint="i === inputs.length - 1 ? 'done' : 'next'"
         @keydown.enter.prevent="flip(null)"
       />
 

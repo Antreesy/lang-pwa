@@ -18,14 +18,20 @@ export function showPresent(lemma: string, present3: string | null): boolean {
 
 /** Verb forms to learn: ["steht auf", "stand auf", "ist aufgestanden"]. The present form only if showPresent(). */
 export function verbParts(w: Word): string[] {
+  return verbSlots(w).map(s => s.part)
+}
+
+/** Verb forms with a label for an input placeholder. */
+export function verbSlots(w: Word): { part: string; label: string }[] {
   const v = w.verb
   if (!v) return []
   const aux = v.auxiliary.map(a => ({ haben: 'hat', sein: 'ist' })[a] ?? a).join('/')
-  return [
-    showPresent(w.lemma, v.present3) ? v.present3 : null,
-    v.past,
-    v.participle ? `${aux} ${v.participle}`.trim() : null,
-  ].filter((p): p is string => !!p)
+  const slots = [
+    { part: showPresent(w.lemma, v.present3) ? v.present3 : null, label: 'er … (Präsens)' },
+    { part: v.past, label: 'Präteritum' },
+    { part: v.participle ? `${aux} ${v.participle}`.trim() : null, label: 'Perfekt' },
+  ]
+  return slots.filter((s): s is { part: string; label: string } => !!s.part)
 }
 
 /** Noun forms to learn: ["das Haus", "die Häuser"], adjectival forms, or ["die Eltern"] for plural-only nouns. */
