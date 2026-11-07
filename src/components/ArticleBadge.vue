@@ -7,20 +7,24 @@ const ARTICLE = { m: 'der', f: 'die', n: 'das', pl: 'die' } as const
 </script>
 
 <template>
-  <span :class="['article', ARTICLE[gender]]" lang="de">{{ ARTICLE[gender] }}</span>
+  <span :class="['article', gender]" lang="de">{{ ARTICLE[gender] }}</span>
 </template>
 
 <style scoped>
 .article {
   font-weight: 700;
 }
-.der {
+.m {
   color: var(--der);
 }
-.die {
+.f {
   color: var(--die);
 }
-.das {
+.n {
   color: var(--das);
+}
+/* The plural article is always "die": no colour, so that it does not look like a feminine noun. */
+.pl {
+  font-weight: inherit;
 }
 </style>
