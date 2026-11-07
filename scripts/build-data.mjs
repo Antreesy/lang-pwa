@@ -7,6 +7,7 @@ import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { createGunzip } from 'node:zlib'
 import { compactEntry, ownForms, sentenceScore, tokenize } from './lib.mjs'
+import { buildDecks, groupsOf } from './decks.mjs'
 
 const MAX_WORDS = Number(process.argv[2] ?? 10000)
 const EXAMPLES_PER_WORD = 5
@@ -100,8 +101,10 @@ log('read Kaikki (this takes some minutes)')
 let entries = []
 const lemmas = new Set()
 const seenIds = new Map()
+const groups = new Map() // word id → deck group keys
 for await (const l of lines('kaikki-de.jsonl.gz')) {
-  const e = compactEntry(JSON.parse(l))
+  const raw = JSON.parse(l)
+  const e = compactEntry(raw)
   if (!e) continue
   lemmas.add(e.lemma)
   // The id must not change when the data is built again, because deck cards refer to it.
@@ -109,7 +112,10 @@ for await (const l of lines('kaikki-de.jsonl.gz')) {
   const base = `${e.pos}:${e.lemma}`
   const n = (seenIds.get(base) ?? 0) + 1
   seenIds.set(base, n)
-  if (e.forms.some(f => counts.has(f))) entries.push({ id: n === 1 ? base : `${base}#${n}`, ...e })
+  if (!e.forms.some(f => counts.has(f))) continue
+  const id = n === 1 ? base : `${base}#${n}`
+  entries.push({ id, ...e })
+  groups.set(id, groupsOf(e, raw))
 }
 // All lemmas are known only after the full file, so the score comes after the loop.
 const score = new Map(entries.map(e => [e.id, ownForms(e, lemmas).reduce((sum, f) => sum + (counts.get(f) ?? 0), 0)]))
@@ -142,10 +148,12 @@ for (const w of words) for (const { s } of best.get(w.id)) {
 // Search in the app ignores case.
 for (const w of words) w.forms = [...new Set(w.forms.map(f => f.toLowerCase()))]
 const sentences = [...used.values()]
+const decks = buildDecks(words, groups)
 
 // 4. Output. The app imports the files again when meta.version changes.
-const meta = { version: new Date().toISOString(), words: words.length, sentences: sentences.length }
+const meta = { version: new Date().toISOString(), words: words.length, sentences: sentences.length, decks: decks.length }
 writeFileSync(OUT + 'words.json', JSON.stringify(words))
 writeFileSync(OUT + 'sentences.json', JSON.stringify(sentences))
+writeFileSync(OUT + 'decks.json', JSON.stringify(decks))
 writeFileSync(OUT + 'meta.json', JSON.stringify(meta, null, 2) + '\n')
 log('done', meta)
