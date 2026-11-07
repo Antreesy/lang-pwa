@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { routes } from './router'
 import { importData } from './db'
 import UpdateToast from './components/UpdateToast.vue'
@@ -18,11 +19,16 @@ async function load() {
   }
 }
 onMounted(load)
+
+// A tab is active on its path and on paths under it: "Учить" on /review/topic:food:1.
+const route = useRoute()
+const isActive = (path: string) => route.path === path || (path !== '/' && route.path.startsWith(path + '/'))
 </script>
 
 <template>
   <main>
-    <RouterView v-if="ready" />
+    <!-- The key makes a new view for each path, so /review/a → /review/b loads deck b. -->
+    <RouterView v-if="ready" :key="route.fullPath" />
     <div v-else-if="error" class="status" role="alert">
       <p>Не удалось загрузить словарь.</p>
       <p class="muted">{{ error }}</p>
@@ -34,7 +40,7 @@ onMounted(load)
     </div>
   </main>
   <nav>
-    <RouterLink v-for="r in routes" :key="r.path" :to="r.path">{{ r.meta.nav }}</RouterLink>
+    <RouterLink v-for="r in routes" :key="r.path" :to="r.path" :class="{ active: isActive(r.path) }">{{ r.meta.nav }}</RouterLink>
   </nav>
   <UpdateToast />
 </template>
@@ -85,7 +91,7 @@ nav a {
   text-decoration: none;
   text-align: center;
 }
-nav a.router-link-exact-active {
+nav a.active {
   color: var(--accent);
   font-weight: 600;
 }

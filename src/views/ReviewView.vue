@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { answerCard, getDueCards, getNextDue, getWord, type DeckCard, type Gender, type Word } from '../db'
+import { ALL, answerCard, getDeck, getWord, NEW_WORDS_PER_DAY, nextCard, type DeckCard, type Gender, type Session, type Word } from '../db'
 import { formatInterval, GRADES, preview, type Grade } from '../srs'
 import { POS } from '../labels'
 import WordCard from '../components/WordCard.vue'
 
-// If nothing is due now, show cards due in the next 20 minutes (learning steps), as Anki does.
-const LEARN_AHEAD_MS = 20 * 60 * 1000
+const props = defineProps<{ deck: string }>()
+
 const ARTICLES: { g: Gender; label: string }[] = [{ g: 'm', label: 'der' }, { g: 'f', label: 'die' }, { g: 'n', label: 'das' }]
 const GRADE_LABEL: Record<Grade, string> = { 1: 'Снова', 2: 'Трудно', 3: 'Хорошо', 4: 'Легко' }
 
@@ -17,7 +17,10 @@ const picked = ref<Gender | null>(null)
 const intervals = ref(new Map<Grade, string>())
 const left = ref(0)
 const nextDue = ref<Date | null>(null)
+const limitReached = ref(false)
+const newTomorrow = ref(false)
 const busy = ref(true)
+const title = ref('')
 
 const isNoun = computed(() => word.value?.pos === 'noun' && !!word.value.genders?.length)
 const articleOk = computed(() => picked.value !== null && !!word.value?.genders?.includes(picked.value))
@@ -27,32 +30,31 @@ const frontMeaning = computed(() => {
 })
 
 // In one session, a word answered in one direction does not show in the other direction (the answer is still in mind).
-const doneCards = new Set<string>()
-const doneWords = new Set<string>()
-const allowed = (c: DeckCard) => !doneWords.has(c.wordId) || doneCards.has(c.id)
+const session: Session = { doneCards: new Set(), doneWords: new Set() }
 
 async function next() {
   busy.value = true
   const now = new Date()
-  const due = (await getDueCards(now)).filter(allowed)
-  const c = due[0] ?? (await getDueCards(new Date(now.getTime() + LEARN_AHEAD_MS))).filter(allowed)[0]
-  left.value = due.length
+  const res = await nextCard(props.deck, session, now)
   flipped.value = false
   picked.value = null
-  card.value = c ?? null
+  card.value = res.card
   word.value = null
-  if (c) {
-    const w = await getWord(c.wordId)
+  if (res.card) {
+    left.value = res.left
+    const w = await getWord(res.card.wordId)
     if (!w) {
       // The word is not in the dictionary after a data update. Skip its cards in this session.
-      doneWords.add(c.wordId)
+      session.doneWords.add(res.card.wordId)
       return next()
     }
     word.value = w
-    const p = await preview(c.fsrs, now)
+    const p = await preview(res.card.fsrs, now)
     intervals.value = new Map(GRADES.map(g => [g, formatInterval(now, p.get(g)!)]))
   } else {
-    nextDue.value = await getNextDue()
+    nextDue.value = res.nextDue
+    limitReached.value = res.limitReached
+    newTomorrow.value = res.newTomorrow
   }
   busy.value = false
 }
@@ -69,8 +71,8 @@ async function rate(g: Grade) {
   if (!card.value || !flipped.value || busy.value) return
   busy.value = true
   await answerCard(card.value, g)
-  doneCards.add(card.value.id)
-  doneWords.add(card.value.wordId)
+  session.doneCards.add(card.value.id)
+  session.doneWords.add(card.value.wordId)
   await next()
 }
 
@@ -88,15 +90,18 @@ function onKey(e: KeyboardEvent) {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   window.addEventListener('keydown', onKey)
+  const d = props.deck === ALL ? null : await getDeck(props.deck)
+  title.value = d ? (d.part ? `${d.name} ${d.part}` : d.name) : 'Все мои карточки'
   next()
 })
 onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>
-  <h1>Повторение <span v-if="card" class="left">осталось: {{ left }}</span></h1>
+  <RouterLink to="/review" class="back">← Колоды</RouterLink>
+  <h1>{{ title }} <span v-if="card" class="left">осталось: {{ left }}</span></h1>
 
   <template v-if="card && word">
     <section v-if="!flipped" class="front">
@@ -131,18 +136,31 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   </template>
 
   <div v-else-if="!busy" class="empty">
-    <template v-if="nextDue">
+    <template v-if="nextDue || newTomorrow">
       <p>На сегодня всё! 🎉</p>
-      <p class="muted">Следующая карточка: {{ nextDue.toLocaleString('ru-RU', { dateStyle: 'medium', timeStyle: 'short' }) }}</p>
+      <p v-if="limitReached" class="muted">Лимит новых слов ({{ NEW_WORDS_PER_DAY }} в день) исчерпан.</p>
+      <p v-if="newTomorrow" class="muted">Новые карточки — завтра.</p>
+      <p v-if="nextDue" class="muted">Следующее повторение: {{ nextDue.toLocaleString('ru-RU', { dateStyle: 'medium', timeStyle: 'short' }) }}</p>
     </template>
-    <template v-else>
-      <p>Колода пуста.</p>
-      <p class="muted">Найдите слово в разделе <RouterLink to="/">«Поиск»</RouterLink> и нажмите «В колоду».</p>
+    <template v-else-if="deck === ALL">
+      <p>Карточек пока нет.</p>
+      <p class="muted">Выберите <RouterLink to="/review">колоду</RouterLink> или найдите слово в разделе <RouterLink to="/">«Поиск»</RouterLink> и нажмите «В колоду».</p>
     </template>
+    <p v-else>Все слова этой колоды изучены. 🎉</p>
   </div>
 </template>
 
 <style scoped>
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--accent);
+  text-decoration: none;
+}
+h1 {
+  font-size: 20px;
+}
 .left {
   font-size: 14px;
   font-weight: 400;

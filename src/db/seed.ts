@@ -1,5 +1,5 @@
 // Import public/data/*.json into IndexedDB at first start and after each data update.
-import { db, fold, type Sentence, type Word } from '.'
+import { db, fold, type Deck, type Sentence, type Word } from '.'
 
 const CHUNK = 2000
 
@@ -26,7 +26,11 @@ export async function importData(onProgress: (done: number) => void): Promise<vo
   if (current?.value === meta.version) return
 
   onProgress(0)
-  const [words, sentences] = await Promise.all([getJson<Word[]>('words.json'), getJson<Sentence[]>('sentences.json')])
+  const [words, sentences, decks] = await Promise.all([
+    getJson<Word[]>('words.json'),
+    getJson<Sentence[]>('sentences.json'),
+    getJson<Deck[]>('decks.json'),
+  ])
   for (const w of words) w.keys = [...new Set(w.forms.map(fold))]
   const total = words.length + sentences.length
   let done = 0
@@ -38,10 +42,11 @@ export async function importData(onProgress: (done: number) => void): Promise<vo
     }
   }
   // One transaction: if the import stops, the old dictionary and old version stay.
-  await db.transaction('rw', db.words, db.sentences, db.meta, async () => {
-    await Promise.all([db.words.clear(), db.sentences.clear()])
+  await db.transaction('rw', [db.words, db.sentences, db.decks, db.meta], async () => {
+    await Promise.all([db.words.clear(), db.sentences.clear(), db.decks.clear()])
     await putAll(db.words, words)
     await putAll(db.sentences, sentences)
+    await db.decks.bulkPut(decks.map((d, order) => ({ ...d, order })))
     await db.meta.put({ key: 'dataVersion', value: meta.version })
   })
 }

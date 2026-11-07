@@ -1,7 +1,7 @@
 // The only module that uses Dexie. Other code uses the functions and types from here,
 // so that a change to PouchDB (for sync) stays in src/db/.
 import Dexie, { type EntityTable } from 'dexie'
-import type { DeckCard, Review } from './deck'
+import type { Deck, DeckCard, Review } from './deck'
 
 export type Gender = 'm' | 'f' | 'n'
 
@@ -39,6 +39,7 @@ export const db = new Dexie('lang-pwa') as Dexie & {
   meta: EntityTable<Meta, 'key'>
   cards: EntityTable<DeckCard, 'id'>
   reviews: EntityTable<Review, 'id'>
+  decks: EntityTable<Deck, 'id'>
 }
 
 db.version(1).stores({
@@ -55,6 +56,10 @@ db.version(3).stores({
   cards: 'id, wordId, fsrs.dueAt',
   reviews: 'id, at, cardId',
 })
+// Version 4: generated decks from decks.json. Import again to fill them.
+db.version(4)
+  .stores({ decks: 'id' })
+  .upgrade(tx => tx.table('meta').delete('dataVersion'))
 
 export { importData } from './seed'
 export * from './deck'
