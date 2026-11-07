@@ -102,6 +102,16 @@ export async function getWord(id: string): Promise<Word | undefined> {
   return db.words.get(id)
 }
 
+let sentenceIds: Promise<number[]> | null = null
+
+/** `n` random sentences for the reading screen. The ids load one time (about 50k numbers), then each page is one bulkGet. */
+export async function randomSentences(n: number): Promise<Sentence[]> {
+  sentenceIds ??= db.sentences.toCollection().primaryKeys()
+  const ids = await sentenceIds
+  const pick = Array.from({ length: Math.min(n, ids.length) }, () => ids[Math.floor(Math.random() * ids.length)])
+  return getSentences(pick)
+}
+
 export async function getSentences(ids: number[]): Promise<Sentence[]> {
   return (await db.sentences.bulkGet(ids)).filter(s => s !== undefined)
 }

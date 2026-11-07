@@ -5,6 +5,7 @@ The menus are in Russian. The content is in German.
 
 - **Поиск:** with an empty search field, it shows the stats: cards due today, reviewed today, total cards. Type a German word to find it, also an inflected form ("ging" → gehen, "Hauser" → Häuser). See the article, plural, verb forms, Russian/English meaning and 5 example sentences.
 - **Учить:** flashcards with FSRS (Снова / Трудно / Хорошо / Легко), DE → RU and RU → DE. Cards ask the meaning and the grammar: nouns with article and plural, verbs with Präteritum and Perfekt. On DE → RU noun cards, select der/die/das first. Optional typed answer: the app checks the German forms. Generated decks: grammar groups and topics. Maximum 20 new words a day; skip a new word with «Знаю» or «Не нужно».
+- **Читать:** random Tatoeba sentences, with endless scroll. Tap a word to open its card in a bottom sheet (also «+ В колоду»). Tap «перевод» to show the translation.
 - **Настройки** (cog icon): theme (system / light / dark), export and import of the deck as a JSON file, sources and licenses.
 
 Keys on a desktop: `Space` shows the answer, `1`–`3` select der/die/das, `1`–`4` rate the card, `Enter` in the answer field shows the answer.
