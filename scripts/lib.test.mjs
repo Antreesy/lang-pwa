@@ -1,6 +1,13 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { compactEntry, tokenize } from './lib.mjs'
+import { compactEntry, ownForms, tokenize } from './lib.mjs'
+
+test('ownForms: a form that is another lemma belongs to that lemma', () => {
+  const lemmas = new Set(['Hau', 'Haus', 'schon', 'schonen'])
+  assert.deepEqual(ownForms({ lemma: 'Hau', forms: ['Hau', 'Haue', 'Haus'] }, lemmas), ['Hau', 'Haue'])
+  assert.deepEqual(ownForms({ lemma: 'Haus', forms: ['Haus', 'Häuser'] }, lemmas), ['Haus', 'Häuser'])
+  assert.deepEqual(ownForms({ lemma: 'schonen', forms: ['schonen', 'schont', 'schon'] }, lemmas), ['schonen', 'schont'])
+})
 
 test('tokenize keeps case and adds lower-case first word', () => {
   assert.deepEqual(tokenize('Essen wir das Essen?'), ['Essen', 'wir', 'das', 'Essen', 'essen'])

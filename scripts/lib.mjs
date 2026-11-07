@@ -31,6 +31,14 @@ export function entryForms(e) {
   return [...out]
 }
 
+/**
+ * Forms that count for rank and example sentences. A form that is the lemma of another entry belongs to that entry:
+ * "Haus" (genitive of der Hau) belongs to das Haus, "schon" (imperative of schonen) belongs to schon.
+ */
+export function ownForms(entry, lemmas) {
+  return entry.forms.filter(f => f === entry.lemma || !lemmas.has(f))
+}
+
 /** Translations in one language: one string per sense, max 3 senses with max 3 words each. */
 function translations(e, lang) {
   const bySense = new Map()

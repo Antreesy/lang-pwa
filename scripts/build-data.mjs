@@ -6,7 +6,7 @@ import { createInterface } from 'node:readline'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { createGunzip } from 'node:zlib'
-import { compactEntry, sentenceScore, tokenize } from './lib.mjs'
+import { compactEntry, ownForms, sentenceScore, tokenize } from './lib.mjs'
 
 const MAX_WORDS = Number(process.argv[2] ?? 10000)
 const EXAMPLES_PER_WORD = 5
@@ -97,26 +97,29 @@ log(`${counts.size} distinct tokens, ${candidates.length} example candidates`)
 
 // 2. Kaikki: keep lemmas with translations, rank them by how often their forms occur in Tatoeba.
 log('read Kaikki (this takes some minutes)')
-const entries = []
+let entries = []
+const lemmas = new Set()
 const seenIds = new Map()
 for await (const l of lines('kaikki-de.jsonl.gz')) {
   const e = compactEntry(JSON.parse(l))
   if (!e) continue
+  lemmas.add(e.lemma)
   // The id must not change when the data is built again, because deck cards refer to it.
   // So it uses Kaikki file order for homonyms, not the rank.
   const base = `${e.pos}:${e.lemma}`
   const n = (seenIds.get(base) ?? 0) + 1
   seenIds.set(base, n)
-  const score = e.forms.reduce((sum, f) => sum + (counts.get(f) ?? 0), 0)
-  if (score > 0) entries.push({ id: n === 1 ? base : `${base}#${n}`, ...e, score })
+  if (e.forms.some(f => counts.has(f))) entries.push({ id: n === 1 ? base : `${base}#${n}`, ...e })
 }
-entries.sort((a, b) => b.score - a.score)
-const words = entries.slice(0, MAX_WORDS).map(({ score: _score, ...e }, rank) => ({ ...e, rank, examples: [] }))
+// All lemmas are known only after the full file, so the score comes after the loop.
+const score = new Map(entries.map(e => [e.id, ownForms(e, lemmas).reduce((sum, f) => sum + (counts.get(f) ?? 0), 0)]))
+entries = entries.filter(e => score.get(e.id) > 0).sort((a, b) => score.get(b.id) - score.get(a.id))
+const words = entries.slice(0, MAX_WORDS).map((e, rank) => ({ ...e, rank, examples: [] }))
 log(`${entries.length} ranked entries, keep ${words.length}`)
 
-// 3. Example sentences: the best few per word, by sentenceScore.
+// 3. Example sentences: the best few per word, by sentenceScore. Only own forms, so "Haus" gives no examples to der Hau.
 const byForm = new Map()
-for (const w of words) for (const f of w.forms) byForm.set(f, [...(byForm.get(f) ?? []), w])
+for (const w of words) for (const f of ownForms(w, lemmas)) byForm.set(f, [...(byForm.get(f) ?? []), w])
 const best = new Map(words.map(w => [w.id, []]))
 for (const s of candidates) {
   const score = sentenceScore(s)
