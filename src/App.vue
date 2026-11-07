@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { routes } from './router'
+import UpdateToast from './components/UpdateToast.vue'
 </script>
 
 <template>
@@ -9,6 +10,7 @@ import { routes } from './router'
   <nav>
     <RouterLink v-for="r in routes" :key="r.path" :to="r.path">{{ r.meta.title }}</RouterLink>
   </nav>
+  <UpdateToast />
 </template>
 
 <style scoped>

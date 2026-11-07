@@ -6,7 +6,8 @@ export default defineConfig({
   plugins: [
     vue(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // A new version waits until the user taps "Обновить" in UpdateToast.vue.
+      registerType: 'prompt',
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'Deutsch lernen',
