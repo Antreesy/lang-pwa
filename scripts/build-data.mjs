@@ -98,14 +98,20 @@ log(`${counts.size} distinct tokens, ${candidates.length} example candidates`)
 // 2. Kaikki: keep lemmas with translations, rank them by how often their forms occur in Tatoeba.
 log('read Kaikki (this takes some minutes)')
 const entries = []
+const seenIds = new Map()
 for await (const l of lines('kaikki-de.jsonl.gz')) {
   const e = compactEntry(JSON.parse(l))
   if (!e) continue
+  // The id must not change when the data is built again, because deck cards refer to it.
+  // So it uses Kaikki file order for homonyms, not the rank.
+  const base = `${e.pos}:${e.lemma}`
+  const n = (seenIds.get(base) ?? 0) + 1
+  seenIds.set(base, n)
   const score = e.forms.reduce((sum, f) => sum + (counts.get(f) ?? 0), 0)
-  if (score > 0) entries.push({ ...e, score })
+  if (score > 0) entries.push({ id: n === 1 ? base : `${base}#${n}`, ...e, score })
 }
 entries.sort((a, b) => b.score - a.score)
-const words = entries.slice(0, MAX_WORDS).map(({ score: _score, ...e }, i) => ({ id: i, ...e, examples: [] }))
+const words = entries.slice(0, MAX_WORDS).map(({ score: _score, ...e }, rank) => ({ ...e, rank, examples: [] }))
 log(`${entries.length} ranked entries, keep ${words.length}`)
 
 // 3. Example sentences: the best few per word, by sentenceScore.
