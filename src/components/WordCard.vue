@@ -49,14 +49,14 @@ function highlight(text: string) {
     </ol>
     <p v-if="word.en.length" class="muted" lang="en">EN: {{ word.en.join('; ') }}</p>
 
+    <slot />
+
     <ul v-if="sentences.length" class="examples">
       <li v-for="s in sentences" :key="s.id">
         <span lang="de"><template v-for="(p, i) in highlight(s.de)" :key="i"><b v-if="p.hit">{{ p.t }}</b><template v-else>{{ p.t }}</template></template></span>
         <span class="muted" :lang="s.ru ? 'ru' : 'en'">{{ s.ru ?? s.en }}</span>
       </li>
     </ul>
-
-    <slot />
   </article>
 </template>
 

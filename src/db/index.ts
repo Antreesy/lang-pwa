@@ -1,6 +1,7 @@
 // The only module that uses Dexie. Other code uses the functions and types from here,
 // so that a change to PouchDB (for sync) stays in src/db/.
 import Dexie, { type EntityTable } from 'dexie'
+import type { DeckCard, Review } from './deck'
 
 export type Gender = 'm' | 'f' | 'n'
 
@@ -36,6 +37,8 @@ export const db = new Dexie('lang-pwa') as Dexie & {
   words: EntityTable<Word, 'id'>
   sentences: EntityTable<Sentence, 'id'>
   meta: EntityTable<Meta, 'key'>
+  cards: EntityTable<DeckCard, 'id'>
+  reviews: EntityTable<Review, 'id'>
 }
 
 db.version(1).stores({
@@ -47,8 +50,14 @@ db.version(1).stores({
 db.version(2)
   .stores({ words: 'id, *keys, rank' })
   .upgrade(tx => tx.table('meta').delete('dataVersion'))
+// Version 3: the deck. String ids (not auto-increment), so that sync between devices can merge them later.
+db.version(3).stores({
+  cards: 'id, wordId, fsrs.dueAt',
+  reviews: 'id, at, cardId',
+})
 
 export { importData } from './seed'
+export * from './deck'
 
 /** Search key: lower case, no diacritics, ß → ss. So "Hauser" finds "Häuser", "Strasse" finds "Straße". */
 export function fold(s: string): string {
