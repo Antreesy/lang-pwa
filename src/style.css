@@ -1,5 +1,5 @@
 /*
- * Colours: the OS theme, or data-theme="light|dark" on <html> from the "Инфо" screen (src/theme.ts).
+ * Colours: the OS theme, or data-theme="light|dark" on <html> from the Settings screen (src/theme.ts).
  * Explicit token sets, not light-dark(): in Chrome, light-dark() in a custom property ignores a later color-scheme change.
  */
 :root {

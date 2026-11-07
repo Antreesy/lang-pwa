@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { getDataInfo } from '../db'
 import { getTheme, setTheme, type Theme } from '../theme'
+import BackupSection from '../components/BackupSection.vue'
 
 const theme = ref<Theme>(getTheme())
 const THEMES: { value: Theme; label: string }[] = [
@@ -19,7 +20,7 @@ onMounted(async () => (info.value = await getDataInfo()))
 </script>
 
 <template>
-  <h1>Инфо</h1>
+  <h1>Настройки</h1>
 
   <section>
     <h2>Тема</h2>
@@ -36,6 +37,8 @@ onMounted(async () => (info.value = await getDataInfo()))
       </button>
     </div>
   </section>
+
+  <BackupSection />
 
   <section>
     <h2>Источники и лицензии</h2>

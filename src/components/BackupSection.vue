@@ -50,32 +50,34 @@ async function upload(e: Event) {
 </script>
 
 <template>
-  <h1>Резервная копия</h1>
-  <p v-if="counts" class="muted">В колоде: {{ counts.cards }} карточек, {{ counts.reviews }} повторений.</p>
-
   <section>
-    <h2>Экспорт</h2>
+    <h2>Резервная копия</h2>
+    <p v-if="counts" class="muted">В колоде: {{ counts.cards }} карточек, {{ counts.reviews }} повторений.</p>
+
+    <h3>Экспорт</h3>
     <p class="muted">Сохраните колоду и историю повторений в файл JSON. Словарь в файл не входит.</p>
     <button class="primary" @click="download">Скачать файл</button>
-  </section>
 
-  <section>
-    <h2>Импорт</h2>
+    <h3>Импорт</h3>
     <p class="muted">Загрузите файл, сохранённый на этом или другом устройстве. Новый прогресс не будет потерян.</p>
     <label class="file">
       Выбрать файл…
       <input type="file" accept=".json,application/json" @change="upload" />
     </label>
-  </section>
 
-  <p v-if="message" class="ok" role="status">{{ message }}</p>
-  <p v-if="error" class="bad" role="alert">{{ error }}</p>
+    <p v-if="message" class="ok" role="status">{{ message }}</p>
+    <p v-if="error" class="bad" role="alert">{{ error }}</p>
+  </section>
 </template>
 
 <style scoped>
 h2 {
   font-size: 18px;
-  margin: 24px 0 4px;
+  margin: 24px 0 8px;
+}
+h3 {
+  font-size: 16px;
+  margin: 16px 0 4px;
 }
 .muted {
   color: var(--muted);

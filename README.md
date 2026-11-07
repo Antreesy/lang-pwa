@@ -3,13 +3,11 @@
 A personal app to learn German (B1). It is a PWA: you install it on Android and Windows, and it works fully offline.
 The menus are in Russian. The content is in German.
 
-- **Поиск:** find a German word, also an inflected form ("ging" → gehen, "Hauser" → Häuser). See the article, plural, verb forms, Russian/English meaning and 5 example sentences.
-- **Учить:** flashcards with FSRS (Снова / Трудно / Хорошо / Легко), DE → RU and RU → DE. For nouns, the card asks for the article first. Generated decks: grammar groups and topics. Maximum 20 new words a day.
-- **Статистика:** cards due today, reviewed today, total cards.
-- **Копия:** export and import of the deck as a JSON file.
-- **Инфо:** sources, licenses and theme (system / light / dark).
+- **Поиск:** with an empty search field, it shows the stats: cards due today, reviewed today, total cards. Type a German word to find it, also an inflected form ("ging" → gehen, "Hauser" → Häuser). See the article, plural, verb forms, Russian/English meaning and 5 example sentences.
+- **Учить:** flashcards with FSRS (Снова / Трудно / Хорошо / Легко), DE → RU and RU → DE. Cards ask the meaning and the grammar: nouns with article and plural, verbs with Präteritum and Perfekt. On DE → RU noun cards, select der/die/das first. Optional typed answer: the app checks the German forms. Generated decks: grammar groups and topics. Maximum 20 new words a day; skip a new word with «Знаю» or «Не нужно».
+- **Настройки** (cog icon): theme (system / light / dark), export and import of the deck as a JSON file, sources and licenses.
 
-Keys on a desktop: `Space` shows the answer, `1`–`3` select der/die/das, `1`–`4` rate the card.
+Keys on a desktop: `Space` shows the answer, `1`–`3` select der/die/das, `1`–`4` rate the card, `Enter` in the answer field shows the answer.
 
 ## Requirements
 
@@ -121,7 +119,7 @@ Do not use Ctrl+Shift+R for this test: a hard reload does not use the service wo
 
 The deck is only on the device until sync exists. Make backups:
 
-1. Open **Копия**.
+1. Open **Настройки** (the cog icon), section **Резервная копия**.
 2. Tap **Скачать файл**. The file name is `deutsch-deck-YYYY-MM-DD.json`.
 
 To restore, tap **Выбрать файл…** on the same or another device. The import merges: a card keeps the version with more reviews, so an old file does not delete newer progress.
@@ -142,9 +140,10 @@ src/
     deck.ts          cards, reviews, decks, daily limit, stats
     backup.ts        JSON export and import
   srs.ts             ts-fsrs wrapper
+  grammar.ts         grammar parts of a card, typed answer check (tests: grammar.test.ts)
   theme.ts           theme choice
   views/             one file per screen
-  components/        WordCard, ArticleBadge, DeckButton, UpdateToast
+  components/        WordCard, ArticleBadge, DeckButton, UpdateToast, StatsPanel, BackupSection
 ```
 
 ## Sources and licenses

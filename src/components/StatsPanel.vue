@@ -7,7 +7,7 @@ onMounted(async () => (s.value = await getStats()))
 </script>
 
 <template>
-  <h1>Статистика</h1>
+  <h2>Статистика</h2>
   <template v-if="s">
     <div class="tiles">
       <div class="tile">
@@ -50,6 +50,11 @@ onMounted(async () => (s.value = await getStats()))
 </template>
 
 <style scoped>
+h2 {
+  font-size: 16px;
+  color: var(--muted);
+  margin: 8px 0 8px;
+}
 .tiles {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

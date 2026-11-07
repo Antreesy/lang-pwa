@@ -4,6 +4,7 @@ import { searchWords, type Word } from '../db'
 import { POS } from '../labels'
 import WordCard from '../components/WordCard.vue'
 import DeckButton from '../components/DeckButton.vue'
+import StatsPanel from '../components/StatsPanel.vue'
 
 const query = ref('')
 const exact = ref<Word[]>([])
@@ -31,6 +32,9 @@ watch(query, async q => {
     autocapitalize="off"
     spellcheck="false"
   />
+
+  <!-- With an empty search field, the screen shows the stats. -->
+  <StatsPanel v-if="!query.trim()" />
 
   <WordCard v-for="w in exact" :key="w.id" :word="w" :query="query">
     <DeckButton :word-id="w.id" />

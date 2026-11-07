@@ -92,7 +92,7 @@ export async function searchWords(query: string, limit = 10): Promise<{ exact: W
   return { exact, more: prefix.filter(w => !ids.has(w.id)).sort(byRank).slice(0, limit) }
 }
 
-/** Dictionary version and size, for the "Инфо" screen. */
+/** Dictionary version and size, for the Settings screen. */
 export async function getDataInfo() {
   const [version, words, sentences] = await Promise.all([db.meta.get('dataVersion'), db.words.count(), db.sentences.count()])
   return { version: version?.value ?? null, words, sentences }

@@ -2,22 +2,25 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import LookupView from './views/LookupView.vue'
 import ReviewView from './views/ReviewView.vue'
 import DecksView from './views/DecksView.vue'
-import StatsView from './views/StatsView.vue'
-import BackupView from './views/BackupView.vue'
-import SourcesView from './views/SourcesView.vue'
+import SettingsView from './views/SettingsView.vue'
 
 // Hash history: the static server always serves index.html, also offline.
-// `nav` is short, so 5 tabs fit on a 360 px screen.
+// `nav` is the tab label; a tab with `icon` shows only the icon (the label is for screen readers).
 export const routes = [
   { path: '/', component: LookupView, meta: { nav: 'Поиск' } },
   { path: '/review', component: DecksView, meta: { nav: 'Учить' } },
-  { path: '/stats', component: StatsView, meta: { nav: 'Статистика' } },
-  { path: '/backup', component: BackupView, meta: { nav: 'Копия' } },
-  { path: '/sources', component: SourcesView, meta: { nav: 'Инфо' } },
+  { path: '/settings', component: SettingsView, meta: { nav: 'Настройки', icon: 'cog' } },
 ]
 
 export const router = createRouter({
   history: createWebHashHistory(),
-  // Review of one deck is under the "Учить" tab, but not in the nav.
-  routes: [...routes, { path: '/review/:deck', component: ReviewView, props: true }],
+  routes: [
+    ...routes,
+    // Review of one deck is under the "Учить" tab, but not in the nav.
+    { path: '/review/:deck', component: ReviewView, props: true },
+    // Old links (installed apps, bookmarks) before the Settings screen.
+    { path: '/backup', redirect: '/settings' },
+    { path: '/sources', redirect: '/settings' },
+    { path: '/stats', redirect: '/' }, // stats are on the search screen now
+  ],
 })
