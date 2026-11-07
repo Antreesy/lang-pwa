@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import { searchWords, type Word } from '../db'
 import { POS } from '../labels'
+import { lookupOnline, type OnlineEntry } from '../online'
 import WordCard from '../components/WordCard.vue'
 import DeckButton from '../components/DeckButton.vue'
 import StatsPanel from '../components/StatsPanel.vue'
@@ -10,7 +11,26 @@ const query = ref('')
 const exact = ref<Word[]>([])
 const more = ref<Word[]>([])
 
+const online = ref<OnlineEntry | null>(null)
+const onlineState = ref<'idle' | 'loading' | 'notfound' | 'error'>('idle')
+
+async function searchOnline() {
+  const q = query.value
+  onlineState.value = 'loading'
+  online.value = null
+  try {
+    const entry = await lookupOnline(q)
+    if (q !== query.value) return
+    online.value = entry
+    onlineState.value = entry ? 'idle' : 'notfound'
+  } catch {
+    if (q === query.value) onlineState.value = 'error'
+  }
+}
+
 watch(query, async q => {
+  online.value = null
+  onlineState.value = 'idle'
   const res = await searchWords(q)
   // Ignore old results: the user typed more while the query ran.
   if (q !== query.value) return
@@ -53,6 +73,19 @@ watch(query, async q => {
   </template>
 
   <p v-if="query.trim() && !exact.length && !more.length" class="muted">Ничего не найдено.</p>
+
+  <section v-if="query.trim() && !exact.length" class="online">
+    <button v-if="!online" :disabled="onlineState === 'loading'" @click="searchOnline">
+      {{ onlineState === 'loading' ? 'Поиск…' : 'Искать онлайн в Викисловаре' }}
+    </button>
+    <p v-if="onlineState === 'notfound'" class="muted">В Викисловаре тоже ничего нет.</p>
+    <p v-if="onlineState === 'error'" class="muted">Не удалось загрузить. Проверьте интернет.</p>
+    <article v-if="online">
+      <h2 lang="de">{{ online.title }}</h2>
+      <pre>{{ online.extract.slice(0, 2000) }}</pre>
+      <a :href="online.url" target="_blank" rel="noopener">Открыть в Викисловаре</a>
+    </article>
+  </section>
 </template>
 
 <style scoped>
@@ -93,6 +126,24 @@ input {
   border: none;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
+}
+.online {
+  margin-top: 16px;
+}
+.online > button {
+  min-height: 48px;
+  padding: 0 16px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+}
+.online pre {
+  white-space: pre-wrap;
+  font: inherit;
+  font-size: 15px;
 }
 .muted {
   color: var(--muted);
