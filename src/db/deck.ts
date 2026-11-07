@@ -111,6 +111,24 @@ export async function deckList(now = new Date()) {
   }
 }
 
+/** Numbers for the stats screen. */
+export async function getStats(now = new Date()) {
+  const endOfDay = new Date(startOfDay(now).getTime() + 86400000)
+  const cards = await db.cards.toArray()
+  const reviewsToday = await db.reviews.where('at').aboveOrEqual(startOfDay(now)).toArray()
+  const started = new Set(cards.filter(c => c.fsrs.reps > 0).map(c => c.wordId))
+  return {
+    dueToday: cards.filter(c => c.fsrs.reps > 0 && c.fsrs.dueAt < endOfDay).length,
+    reviewedToday: reviewsToday.length,
+    correctToday: reviewsToday.filter(r => r.rating > 1).length,
+    newWordsToday: await newWordsToday(now),
+    totalCards: cards.length,
+    words: new Set(cards.map(c => c.wordId)).size,
+    startedWords: started.size,
+    totalReviews: await db.reviews.count(),
+  }
+}
+
 export async function getDeck(id: string): Promise<Deck | undefined> {
   return db.decks.get(id)
 }

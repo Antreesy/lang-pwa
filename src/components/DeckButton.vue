@@ -29,7 +29,7 @@ async function add() {
   margin-top: 12px;
   font: inherit;
   font-weight: 600;
-  color: #fff;
+  color: var(--on-accent);
   background: var(--accent);
   border: none;
   border-radius: 8px;

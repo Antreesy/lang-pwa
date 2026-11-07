@@ -1,19 +1,53 @@
-/* Colours follow the OS theme. A manual theme toggle comes in a later step. */
+/*
+ * Colours: the OS theme, or data-theme="light|dark" on <html> from the "Инфо" screen (src/theme.ts).
+ * Explicit token sets, not light-dark(): in Chrome, light-dark() in a custom property ignores a later color-scheme change.
+ */
 :root {
-  color-scheme: light dark;
-  --bg: light-dark(#f7f7f8, #16171a);
-  --surface: light-dark(#ffffff, #202226);
-  --text: light-dark(#1b1c1f, #e8e8ea);
-  --muted: light-dark(#666a73, #9a9ea8);
-  --border: light-dark(#dcdde1, #34363c);
-  --accent: light-dark(#2f5fd0, #7aa2ff);
+  color-scheme: light;
+  --bg: #f7f7f8;
+  --surface: #ffffff;
+  --text: #1b1c1f;
+  --muted: #666a73;
+  --border: #dcdde1;
+  --accent: #2f5fd0;
+  --on-accent: #ffffff; /* text on an accent background */
   /* Article colours: der blue, die red, das green. */
-  --der: light-dark(#1f5fbf, #74a7ff);
-  --die: light-dark(#c62828, #ff7b7b);
-  --das: light-dark(#2e7d32, #6fd47a);
+  --der: #1f5fbf;
+  --die: #c62828;
+  --das: #2e7d32;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-size: 16px;
   line-height: 1.5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #16171a;
+    --surface: #202226;
+    --text: #e8e8ea;
+    --muted: #9a9ea8;
+    --border: #34363c;
+    --accent: #7aa2ff;
+    --on-accent: #0e1a33;
+    --der: #74a7ff;
+    --die: #ff7b7b;
+    --das: #6fd47a;
+  }
+}
+/* Same values as above: for a dark choice on a light OS. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #16171a;
+  --surface: #202226;
+  --text: #e8e8ea;
+  --muted: #9a9ea8;
+  --border: #34363c;
+  --accent: #7aa2ff;
+  --on-accent: #0e1a33;
+  --der: #74a7ff;
+  --die: #ff7b7b;
+  --das: #6fd47a;
 }
 
 * {

@@ -63,6 +63,7 @@ db.version(4)
 
 export { importData } from './seed'
 export * from './deck'
+export * from './backup'
 
 /** Search key: lower case, no diacritics, ß → ss. So "Hauser" finds "Häuser", "Strasse" finds "Straße". */
 export function fold(s: string): string {
@@ -86,6 +87,12 @@ export async function searchWords(query: string, limit = 10): Promise<{ exact: W
   const prefix = await db.words.where('keys').startsWith(key).limit(300).distinct().toArray()
   const ids = new Set(exact.map(w => w.id))
   return { exact, more: prefix.filter(w => !ids.has(w.id)).sort(byRank).slice(0, limit) }
+}
+
+/** Dictionary version and size, for the "Инфо" screen. */
+export async function getDataInfo() {
+  const [version, words, sentences] = await Promise.all([db.meta.get('dataVersion'), db.words.count(), db.sentences.count()])
+  return { version: version?.value ?? null, words, sentences }
 }
 
 export async function getWord(id: string): Promise<Word | undefined> {

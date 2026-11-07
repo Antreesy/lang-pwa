@@ -43,7 +43,7 @@ button {
   cursor: pointer;
 }
 button.primary {
-  color: #fff;
+  color: var(--on-accent);
   background: var(--accent);
 }
 </style>
