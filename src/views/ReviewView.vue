@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { ALL, answerCard, getDeck, getWord, NEW_WORDS_PER_DAY, nextCard, skipWord, type DeckCard, type Gender, type Session, type Skip, type Word } from '../db'
 import { formatInterval, GRADES, preview, type Grade } from '../srs'
 import { POS } from '../labels'
+import { nounParts, showPresent } from '../grammar'
 import WordCard from '../components/WordCard.vue'
 
 const props = defineProps<{ deck: string }>()
@@ -22,7 +23,21 @@ const newTomorrow = ref(false)
 const busy = ref(true)
 const title = ref('')
 
-const isNoun = computed(() => word.value?.pos === 'noun' && !!word.value.genders?.length)
+// Article buttons only on DE→RU noun cards with one gender. On RU→DE cards, the article is recalled with the word.
+const isNoun = computed(() => card.value?.dir === 'de-ru' && word.value?.pos === 'noun' && word.value.genders?.length === 1 && !word.value.pluralOnly)
+
+/** What to recall, shown on the front: meaning and grammar. */
+const recall = computed(() => {
+  const w = word.value
+  if (!w || !card.value) return ''
+  const de = card.value.dir === 'de-ru'
+  if (w.verb) {
+    const forms = [showPresent(w.lemma, w.verb.present3) && 'er …', w.verb.past && 'Präteritum', w.verb.participle && 'Perfekt'].filter(Boolean).join(', ')
+    return (de ? 'значение' : 'инфинитив') + (forms ? ` + ${forms}` : '')
+  }
+  if (w.pos === 'noun' && nounParts(w).length) return de ? 'значение + мн. число' : 'слово с артиклем + мн. число'
+  return de ? 'значение' : 'слово по-немецки'
+})
 const articleOk = computed(() => picked.value !== null && !!word.value?.genders?.includes(picked.value))
 const frontMeaning = computed(() => {
   const w = word.value
@@ -116,6 +131,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <p class="dir">{{ card.dir === 'de-ru' ? 'DE → RU' : 'RU → DE' }} · {{ POS[word.pos] ?? word.pos }}</p>
       <p v-if="card.dir === 'de-ru'" class="prompt" lang="de">{{ word.lemma }}</p>
       <p v-else class="prompt" :lang="word.ru.length ? 'ru' : 'en'">{{ frontMeaning }}</p>
+      <p class="recall">Вспомните: {{ recall }}</p>
 
       <template v-if="isNoun">
         <p class="hint">Выберите артикль:</p>
@@ -222,6 +238,11 @@ button {
 }
 .articles .das {
   color: var(--das);
+}
+.recall {
+  margin: -16px 0 24px;
+  color: var(--muted);
+  font-size: 15px;
 }
 .skip {
   display: flex;

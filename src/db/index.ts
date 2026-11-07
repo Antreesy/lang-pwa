@@ -2,6 +2,7 @@
 // so that a change to PouchDB (for sync) stays in src/db/.
 import Dexie, { type EntityTable } from 'dexie'
 import type { Deck, DeckCard, Review, Skip } from './deck'
+import { fold } from '../grammar'
 
 export type Gender = 'm' | 'f' | 'n'
 
@@ -17,6 +18,8 @@ export interface Word {
   keys?: string[] // fold(forms), added at import, search index
   genders?: Gender[]
   plural?: string | null
+  pluralOnly?: boolean // die Eltern, die Ferien
+  adjForms?: string[] // adjectival nouns: der Alte · ein Alter · die Alten
   verb?: { present3: string | null; past: string | null; participle: string | null; auxiliary: string[] }
   examples: number[] // Sentence ids
 }
@@ -68,10 +71,7 @@ export { importData } from './seed'
 export * from './deck'
 export * from './backup'
 
-/** Search key: lower case, no diacritics, ß → ss. So "Hauser" finds "Häuser", "Strasse" finds "Straße". */
-export function fold(s: string): string {
-  return s.trim().toLowerCase().replace(/ß/g, 'ss').normalize('NFD').replace(/\p{M}/gu, '')
-}
+export { fold }
 
 /**
  * Words for a search string. `exact`: an inflected form is equal to the query ("ging" → gehen).

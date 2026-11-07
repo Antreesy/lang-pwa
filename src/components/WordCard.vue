@@ -2,12 +2,10 @@
 import { ref, watchEffect } from 'vue'
 import { getSentences, type Sentence, type Word } from '../db'
 import { POS } from '../labels'
+import { verbParts } from '../grammar'
 import ArticleBadge from './ArticleBadge.vue'
 
 const props = defineProps<{ word: Word; query?: string }>()
-
-// Perfect tense in 3rd person, as in dictionaries: "ist gegangen".
-const AUX: Record<string, string> = { haben: 'hat', sein: 'ist' }
 
 const sentences = ref<Sentence[]>([])
 watchEffect(async () => {
@@ -26,6 +24,7 @@ function highlight(text: string) {
   <article class="card">
     <header>
       <h2 lang="de">
+        <template v-if="word.pluralOnly"><ArticleBadge gender="pl" />&#32;</template>
         <template v-for="g in word.genders ?? []" :key="g"><ArticleBadge :gender="g" />&#32;</template>
         {{ word.lemma }}
       </h2>
@@ -36,13 +35,13 @@ function highlight(text: string) {
       «<span lang="de">{{ query.trim() }}</span>» — форма слова
     </p>
 
-    <p v-if="word.pos === 'noun'" lang="de">
-      <template v-if="word.plural"><ArticleBadge gender="pl" /> {{ word.plural }}</template>
-      <span v-else class="muted">нет мн. числа</span>
-    </p>
-    <p v-if="word.verb" lang="de">
-      {{ [word.verb.present3, word.verb.past, word.verb.participle && `${word.verb.auxiliary.map(a => AUX[a] ?? a).join('/')} ${word.verb.participle}`.trim()].filter(Boolean).join(' · ') }}
-    </p>
+    <template v-if="word.pos === 'noun'">
+      <p v-if="word.adjForms?.length" lang="de">{{ word.adjForms.join(' · ') }}</p>
+      <p v-else-if="word.pluralOnly" class="muted">только множественное число</p>
+      <p v-else-if="word.plural" lang="de"><ArticleBadge gender="pl" /> {{ word.plural }}</p>
+      <p v-else class="muted">нет мн. числа</p>
+    </template>
+    <p v-if="word.verb" lang="de">{{ verbParts(word).join(' · ') }}</p>
 
     <ol v-if="word.ru.length" class="meanings">
       <li v-for="m in word.ru" :key="m" lang="ru">{{ m }}</li>
