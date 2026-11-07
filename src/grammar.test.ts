@@ -1,7 +1,7 @@
 // Run with: npm test (Node strips the types).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { checkAnswer, checkParts, nounParts, showPresent, verbParts } from './grammar.ts'
+import { checkAnswer, checkParts, nounParts, showPresent, verbParts, verbSlots } from './grammar.ts'
 
 const word = (w: object) => ({ id: 'x', rank: 0, ru: [], en: [], forms: [], examples: [], ...w }) as Parameters<typeof verbParts>[0]
 
@@ -21,6 +21,11 @@ test('verbParts', () => {
   assert.deepEqual(verbParts(gehen), ['ging', 'ist gegangen'])
   const auf = word({ lemma: 'aufstehen', pos: 'verb', verb: { present3: 'steht auf', past: 'stand auf', participle: 'aufgestanden', auxiliary: ['sein', 'haben'] } })
   assert.deepEqual(verbParts(auf), ['steht auf', 'stand auf', 'ist/hat aufgestanden'])
+})
+
+test('verbSlots: labels match parts', () => {
+  const gehen = word({ lemma: 'gehen', pos: 'verb', verb: { present3: 'geht', past: 'ging', participle: 'gegangen', auxiliary: ['sein'] } })
+  assert.deepEqual(verbSlots(gehen).map(s => s.label), ['Präteritum', 'Perfekt'])
 })
 
 test('nounParts', () => {
