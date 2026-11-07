@@ -34,7 +34,7 @@ onMounted(load)
     </div>
   </main>
   <nav>
-    <RouterLink v-for="r in routes" :key="r.path" :to="r.path">{{ r.meta.title }}</RouterLink>
+    <RouterLink v-for="r in routes" :key="r.path" :to="r.path">{{ r.meta.nav }}</RouterLink>
   </nav>
   <UpdateToast />
 </template>
@@ -75,12 +75,12 @@ nav {
 nav a {
   flex: 1;
   min-height: 56px;
-  min-width: 72px;
+  min-width: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 8px;
-  font-size: 14px;
+  padding: 0 4px;
+  font-size: 13px;
   color: var(--muted);
   text-decoration: none;
   text-align: center;

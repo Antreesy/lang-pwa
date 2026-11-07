@@ -7,6 +7,10 @@
   --muted: light-dark(#666a73, #9a9ea8);
   --border: light-dark(#dcdde1, #34363c);
   --accent: light-dark(#2f5fd0, #7aa2ff);
+  /* Article colours: der blue, die red, das green. */
+  --der: light-dark(#1f5fbf, #74a7ff);
+  --die: light-dark(#c62828, #ff7b7b);
+  --das: light-dark(#2e7d32, #6fd47a);
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-size: 16px;
   line-height: 1.5;

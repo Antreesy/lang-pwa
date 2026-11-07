@@ -44,3 +44,26 @@ db.version(1).stores({
 })
 
 export { importData } from './seed'
+
+/**
+ * Words for a search string. `exact`: an inflected form is equal to the query ("ging" → gehen).
+ * `more`: forms that start with the query, most frequent first, without the exact ones.
+ */
+export async function searchWords(query: string, limit = 10): Promise<{ exact: Word[]; more: Word[] }> {
+  const q = query.trim().toLowerCase()
+  if (!q) return { exact: [], more: [] }
+  const byRank = (a: Word, b: Word) => a.rank - b.rank
+  const exact = (await db.words.where('forms').equals(q).toArray()).sort(byRank)
+  // shortcut: only the first 300 forms in alphabetical order are ranked, so a frequent word can be missing for a 1-letter query.
+  const prefix = await db.words.where('forms').startsWith(q).limit(300).distinct().toArray()
+  const ids = new Set(exact.map(w => w.id))
+  return { exact, more: prefix.filter(w => !ids.has(w.id)).sort(byRank).slice(0, limit) }
+}
+
+export async function getWord(id: string): Promise<Word | undefined> {
+  return db.words.get(id)
+}
+
+export async function getSentences(ids: number[]): Promise<Sentence[]> {
+  return (await db.sentences.bulkGet(ids)).filter(s => s !== undefined)
+}

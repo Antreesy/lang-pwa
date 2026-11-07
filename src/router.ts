@@ -6,12 +6,13 @@ import BackupView from './views/BackupView.vue'
 import SourcesView from './views/SourcesView.vue'
 
 // Hash history: the static server always serves index.html, also offline.
+// `nav` is short, so 5 tabs fit on a 360 px screen.
 export const routes = [
-  { path: '/', component: LookupView, meta: { title: 'Поиск' } },
-  { path: '/review', component: ReviewView, meta: { title: 'Повторение' } },
-  { path: '/stats', component: StatsView, meta: { title: 'Статистика' } },
-  { path: '/backup', component: BackupView, meta: { title: 'Резервная копия' } },
-  { path: '/sources', component: SourcesView, meta: { title: 'Источники' } },
+  { path: '/', component: LookupView, meta: { nav: 'Поиск' } },
+  { path: '/review', component: ReviewView, meta: { nav: 'Учить' } },
+  { path: '/stats', component: StatsView, meta: { nav: 'Статистика' } },
+  { path: '/backup', component: BackupView, meta: { nav: 'Копия' } },
+  { path: '/sources', component: SourcesView, meta: { nav: 'Инфо' } },
 ]
 
 export const router = createRouter({ history: createWebHashHistory(), routes })
