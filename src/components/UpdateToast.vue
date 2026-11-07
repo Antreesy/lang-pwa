@@ -1,13 +1,25 @@
 <script setup lang="ts">
 import { useRegisterSW } from 'virtual:pwa-register/vue'
 
-const { needRefresh, updateServiceWorker } = useRegisterSW()
+const { needRefresh } = useRegisterSW()
+
+/**
+ * Activate the waiting service worker, then reload.
+ * The plugin's updateServiceWorker() reloads only a page that the old worker controls,
+ * and does nothing if no worker waits (another window updated first). This works in all cases.
+ */
+async function update() {
+  const sw = (await navigator.serviceWorker.getRegistration())?.waiting
+  if (!sw) return location.reload()
+  sw.addEventListener('statechange', () => sw.state === 'activated' && location.reload())
+  sw.postMessage({ type: 'SKIP_WAITING' })
+}
 </script>
 
 <template>
   <div v-if="needRefresh" class="toast" role="status">
     <span>Доступна новая версия</span>
-    <button class="primary" @click="updateServiceWorker()">Обновить</button>
+    <button class="primary" @click="update">Обновить</button>
     <button @click="needRefresh = false">Позже</button>
   </div>
 </template>
