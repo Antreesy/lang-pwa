@@ -55,7 +55,7 @@ export function checkParts(w: Word, parts: string[]): string[] {
 
 /**
  * Check the German words in a typed answer. Each expected part is correct if all its words are in the answer;
- * a word in parentheses is optional. Order, commas, case and missing umlauts do not matter.
+ * a word in parentheses is optional; "ist/hat" accepts either word. Order, commas, case and missing umlauts do not matter.
  * Cyrillic words are the Russian meaning: they are returned for comparison.
  */
 export function checkAnswer(typed: string, expected: string[]): { parts: PartResult[]; russian: string } {
@@ -64,7 +64,7 @@ export function checkAnswer(typed: string, expected: string[]): { parts: PartRes
   const german = new Set(words.filter(t => !/\p{Script=Cyrillic}/u.test(t)).map(fold))
   const required = (part: string) => part.split(/\s+/).filter(t => !t.startsWith('('))
   return {
-    parts: expected.map(part => ({ part, ok: required(part).every(t => german.has(fold(t))) })),
+    parts: expected.map(part => ({ part, ok: required(part).every(t => t.split('/').some(alt => german.has(fold(alt)))) })),
     russian,
   }
 }
