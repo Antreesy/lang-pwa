@@ -94,3 +94,10 @@ export function compactEntry(e) {
 export function sentenceScore(s) {
   return (s.ru ? 0 : 1000) + Math.abs(s.de.length - 45)
 }
+
+/** Past-tense forms of a verb: Präteritum (first word, "fing an" → "fing") and Partizip II. */
+export function pastForms(entry) {
+  if (!entry.verb) return new Set()
+  const { past, participle } = entry.verb
+  return new Set([past?.split(' ')[0], participle].filter(Boolean))
+}
