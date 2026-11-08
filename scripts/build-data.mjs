@@ -7,11 +7,12 @@ import { createInterface } from 'node:readline'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { createGunzip } from 'node:zlib'
-import { compactEntry, ownForms, sentenceScore, tokenize } from './lib.mjs'
+import { compactEntry, ownForms, pastForms, sentenceScore, tokenize } from './lib.mjs'
 import { buildDecks, groupsOf } from './decks.mjs'
 
 const MAX_WORDS = Number(process.argv[2] ?? 10000)
 const EXAMPLES_PER_WORD = 5
+const PAST_BONUS = 30 // lower score is better
 const CACHE = new URL('../.cache/', import.meta.url).pathname
 const OUT = new URL('../public/data/', import.meta.url).pathname
 const TATOEBA = 'https://downloads.tatoeba.org/exports/per_language/'
@@ -131,11 +132,13 @@ const byForm = new Map()
 for (const w of words) for (const f of ownForms(w, lemmas)) byForm.set(f, [...(byForm.get(f) ?? []), w])
 const best = new Map(words.map(w => [w.id, []]))
 for (const s of candidates) {
-  const score = sentenceScore(s)
+  const base = sentenceScore(s)
   const seen = new Set()
   for (const t of s.tokens) for (const w of byForm.get(t) ?? []) {
     if (seen.has(w.id)) continue
     seen.add(w.id)
+    // Prefer sentences that show the verb in Präteritum or Perfekt.
+    const score = pastForms(w).has(t) ? base - PAST_BONUS : base
     const list = best.get(w.id)
     if (list.length === EXAMPLES_PER_WORD && score >= list.at(-1).score) continue
     list.push({ s, score })
