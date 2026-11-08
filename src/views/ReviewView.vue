@@ -25,7 +25,7 @@ const title = ref('')
 // Article buttons only on DE→RU noun cards with one gender. On RU→DE cards, the article is recalled with the word.
 const isNoun = computed(() => card.value?.dir === 'de-ru' && word.value?.pos === 'noun' && word.value.genders?.length === 1 && !word.value.pluralOnly)
 
-// Optional typed answer. German parts are checked; Russian words are shown next to the meaning.
+// Optional typed answer: the German forms are checked.
 // A card with several expected forms gets one input per form, with the form name as placeholder.
 const slots = computed<{ part: string; label: string }[]>(() => {
   const w = word.value
@@ -39,13 +39,8 @@ const slots = computed<{ part: string; label: string }[]>(() => {
   return [...(w.adjForms?.length ? nouns : nouns.slice(1)), ...verbSlots(w)]
 })
 const expected = computed(() => (word.value ? checkParts(word.value, slots.value.map(s => s.part)) : []))
-// One input per slot, plus a translation input on DE→RU cards. A single input if there is nothing to split.
-const multi = computed(() => slots.value.length > 1)
-const inputs = computed(() => {
-  if (!multi.value) return [{ label: 'Ответ (необязательно)' }]
-  const list = slots.value.map(s => ({ label: s.label }))
-  return card.value?.dir === 'de-ru' ? [{ label: 'Перевод' }, ...list] : list
-})
+// One input per expected German form. A DE→RU card with nothing to type has no input.
+const inputs = computed(() => slots.value.map(s => ({ label: s.label })))
 const answers = ref<string[]>([])
 const typed = computed(() => answers.value.join(' , '))
 const result = computed(() => (flipped.value && typed.value.replace(/[\s,]/g, '') ? checkAnswer(typed.value, expected.value) : null))
@@ -194,7 +189,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <ul v-if="result.parts.length">
           <li v-for="p in result.parts" :key="p.part" :class="p.ok ? 'ok' : 'bad'" lang="de">{{ p.ok ? '✓' : '✗' }} {{ p.part }}</li>
         </ul>
-        <p v-if="result.russian" class="muted">Ваш перевод: <span lang="ru">{{ result.russian }}</span></p>
       </div>
       <WordCard :word="word" />
       <div class="grades">
@@ -307,9 +301,6 @@ button {
   padding: 0;
   list-style: none;
   font-weight: 600;
-}
-.typed .muted {
-  margin: 0 0 12px;
 }
 .recall {
   margin: -16px 0 24px;
