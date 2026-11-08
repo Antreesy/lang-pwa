@@ -204,6 +204,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           <kbd>{{ g }}</kbd>
         </button>
       </div>
+      <div v-if="card.fsrs.reps === 0" class="skip">
+        <span class="hint">Новое слово</span>
+        <button :disabled="busy" @click="skip('known')">Знаю</button>
+        <button :disabled="busy" @click="skip('ignored')">Не нужно</button>
+      </div>
     </section>
   </template>
 
