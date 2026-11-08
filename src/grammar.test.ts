@@ -46,6 +46,13 @@ test('checkAnswer: German parts checked, Russian returned', () => {
   assert.deepEqual(checkAnswer('gehen ging gegangen', ['ging', 'ist gegangen']).parts.map(p => p.ok), [true, false])
 })
 
+test('checkAnswer: either auxiliary is accepted for "ist/hat"', () => {
+  const parts = ['ist/hat aufgestanden']
+  for (const typed of ['ist aufgestanden', 'hat aufgestanden', 'hat/ist aufgestanden']) assert.equal(checkAnswer(typed, parts).parts[0].ok, true)
+  assert.equal(checkAnswer('aufgestanden', parts).parts[0].ok, false)
+  assert.equal(checkAnswer('war aufgestanden', parts).parts[0].ok, false)
+})
+
 test('checkParts: plural article optional, singular article required', () => {
   const haus = { id: 'x', rank: 0, ru: [], en: [], forms: [], examples: [], lemma: 'Haus', pos: 'noun', genders: ['n'], plural: 'Häuser' } as Parameters<typeof nounParts>[0]
   const parts = checkParts(haus, nounParts(haus))
